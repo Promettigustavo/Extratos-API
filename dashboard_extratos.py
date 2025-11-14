@@ -529,51 +529,57 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         try:
             # ZIP_STORED = sem compressão (mais confiável)
             with ZipFile(zip_buffer, 'w', ZIP_STORED) as zip_file:
-                for idx, arquivo in enumerate(arquivos_gerados, 1):
-                    if os.path.exists(arquivo):
-                        nome_original = os.path.basename(arquivo)
-                        
-                        # Encurtar nome para evitar "caminho muito longo" no Windows
-                        # Limite Windows: 260 caracteres totais (incluindo caminho)
-                        # Vamos usar nomes curtos: Extrato_001.xlsx, Comprovante_001.pdf
-                        
-                        extensao = os.path.splitext(nome_original)[1]  # .xlsx ou .pdf
-                        
-                        if 'exportar-Santander' in nome_original or 'Extrato' in nome_original:
-                            # Extrair fundo, agência e conta do nome original
-                            # Formato: exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx
-                            partes = nome_original.replace('exportar-Santander - Extrato ', '').replace(extensao, '').split('-')
-                            if len(partes) >= 3:
-                                fundo = partes[-3][:20]  # Limitar a 20 caracteres
-                                agencia = partes[-2]
-                                conta = partes[-1]
-                                nome_curto = f"Extrato_{fundo}_{agencia}_{conta}{extensao}"
+                contador = 0
+                for fundo, arquivos in arquivos_por_fundo.items():
+                    # Nome de pasta seguro para o fundo (curto)
+                    fundo_safe = fundo.strip()[:30]  # Limitar a 30 caracteres
+                    fundo_safe = re.sub(r'[^\w\s-]', '', fundo_safe)
+                    fundo_safe = re.sub(r'\s+', '_', fundo_safe)
+                    fundo_safe = fundo_safe.strip('_')
+                    
+                    # Período para subpasta
+                    periodo_str = f"{data_inicial.strftime('%d-%m-%Y')}_a_{data_final.strftime('%d-%m-%Y')}"
+                    
+                    print(f"\n📂 Processando fundo: {fundo_safe}")
+                    
+                    for arquivo in arquivos:
+                        if os.path.exists(arquivo):
+                            nome_original = os.path.basename(arquivo)
+                            extensao = os.path.splitext(nome_original)[1]
+                            
+                            # Encurtar nome do arquivo
+                            if 'exportar-Santander' in nome_original or 'Extrato' in nome_original:
+                                partes = nome_original.replace('exportar-Santander - Extrato ', '').replace(extensao, '').split('-')
+                                if len(partes) >= 2:
+                                    agencia = partes[-2]
+                                    conta = partes[-1]
+                                    nome_curto = f"Extrato_{agencia}_{conta}{extensao}"
+                                else:
+                                    nome_curto = f"Extrato{extensao}"
+                            
+                            elif 'comprovante-ibe' in nome_original:
+                                partes = nome_original.replace('comprovante-ibe-', '').replace(extensao, '').split('-')
+                                if len(partes) >= 3:
+                                    agencia = partes[1]
+                                    conta = partes[2]
+                                    nome_curto = f"Comprov_{agencia}_{conta}{extensao}"
+                                else:
+                                    nome_curto = f"Comprovante{extensao}"
                             else:
-                                nome_curto = f"Extrato_{idx:03d}{extensao}"
-                        
-                        elif 'comprovante-ibe' in nome_original:
-                            # Formato: comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
-                            partes = nome_original.replace('comprovante-ibe-', '').replace(extensao, '').split('-')
-                            if len(partes) >= 3:
-                                fundo = partes[0][:20]  # Limitar a 20 caracteres
-                                agencia = partes[1]
-                                conta = partes[2]
-                                nome_curto = f"Comprov_{fundo}_{agencia}_{conta}{extensao}"
-                            else:
-                                nome_curto = f"Comprovante_{idx:03d}{extensao}"
-                        else:
-                            # Nome genérico se não reconhecer o padrão
-                            nome_curto = f"Arquivo_{idx:03d}{extensao}"
-                        
-                        # Garantir que não ultrapassa 100 caracteres
-                        if len(nome_curto) > 100:
-                            nome_base = os.path.splitext(nome_curto)[0][:95]
-                            nome_curto = f"{nome_base}{extensao}"
-                        
-                        zip_file.write(arquivo, nome_curto)
-                        print(f"   ✅ {nome_original[:50]} → {nome_curto}")
+                                nome_curto = f"Arquivo{extensao}"
+                            
+                            # Estrutura: FUNDO/PERIODO/arquivo.ext
+                            caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_curto}"
+                            
+                            zip_file.write(arquivo, caminho_zip)
+                            contador += 1
+                            
+                            if contador <= 15:
+                                print(f"   ✅ {caminho_zip}")
+                            elif contador == 16:
+                                print(f"   ... (mostrando apenas primeiros 15)")
             
-            print(f"\n✅ ZIP criado com {len(arquivos_gerados)} arquivo(s)")
+            print(f"\n✅ ZIP criado com {contador} arquivo(s) em {len(arquivos_por_fundo)} pasta(s)")
             
             # Obter bytes do ZIP
             zip_bytes = zip_buffer.getvalue()
