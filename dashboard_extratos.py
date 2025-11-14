@@ -484,17 +484,17 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             # Padrão PDF: comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
             
             if nome.startswith('exportar-Santander'):
-                # Excel: extrair terceiro segmento após último '-' antes de .xlsx
-                partes = nome.replace('.xlsx', '').split('-')
-                if len(partes) >= 3:
-                    # partes[-3] = FUNDO, partes[-2] = AGENCIA, partes[-1] = CONTA
-                    fundo_nome = partes[-3].strip()
+                # Excel: formato "exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx"
+                # Extrair tudo entre último "de YYYY-" e penúltimo "-"
+                match = re.search(r'de \d{4}-(.+)-\d{4}-\d+\.xlsx$', nome)
+                if match:
+                    fundo_nome = match.group(1).strip()
             elif nome.startswith('comprovante-ibe'):
-                # PDF: formato comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
-                partes = nome.replace('.pdf', '').split('-')
-                if len(partes) >= 4:
-                    # partes[2] = FUNDO
-                    fundo_nome = partes[2].strip()
+                # PDF: formato "comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf"
+                # Extrair tudo entre "comprovante-ibe-" e os últimos 3 segmentos (AGENCIA-CONTA-UUID)
+                match = re.search(r'comprovante-ibe-(.+)-\d{4}-\d+-[A-F0-9\-]+\.pdf$', nome)
+                if match:
+                    fundo_nome = match.group(1).strip()
             
             # Se não conseguiu extrair, tentar usar fundos_selecionados
             if fundo_nome == "Sem_Fundo" and len(fundos_selecionados) == 1:
@@ -503,6 +503,10 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             if fundo_nome not in arquivos_por_fundo:
                 arquivos_por_fundo[fundo_nome] = []
             arquivos_por_fundo[fundo_nome].append(arquivo)
+        
+        print(f"\n📁 Fundos identificados: {len(arquivos_por_fundo)}")
+        for fundo in sorted(arquivos_por_fundo.keys()):
+            print(f"   - {fundo}: {len(arquivos_por_fundo[fundo])} arquivo(s)")
         
         zip_buffer = BytesIO()
         with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zip_file:
