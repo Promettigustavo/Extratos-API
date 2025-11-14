@@ -64,6 +64,8 @@ class SantanderExtratosBancarios:
             raise ValueError(f"Fundo {fundo_id} possui credenciais vazias")
         
         self.fundo_id = fundo_id
+        self.fundo_nome = creds.get('nome', fundo_id)  # Nome do fundo para usar nos arquivos
+        self.creds = creds  # Armazenar credenciais completas
         self.client_id = creds["client_id"]
         self.client_secret = creds["client_secret"]
         self.cnpj = creds["cnpj"]
@@ -364,8 +366,7 @@ class SantanderExtratosBancarios:
         data_hoje = datetime.now()
         data_formatada = data_hoje.strftime("%d de %B de %Y")
         # Incluir nome do fundo no arquivo para facilitar organização
-        fundo_nome = self.creds.get('nome', self.fundo_id)
-        filename = f"exportar-Santander - Extrato {data_formatada}-{fundo_nome}-{branch_code}-{account_number}.xlsx"
+        filename = f"exportar-Santander - Extrato {data_formatada}-{self.fundo_nome}-{branch_code}-{account_number}.xlsx"
         filepath = os.path.join(pasta_saida, filename)
         
         # Criar estrutura de dados no formato IBE
@@ -501,9 +502,8 @@ class SantanderExtratosBancarios:
             pasta_saida = os.getcwd()
         
         # Nome do arquivo com nome do fundo: comprovante-ibe-{FUNDO}-{UUID}.pdf
-        fundo_nome = self.creds.get('nome', self.fundo_id)
         file_uuid = str(uuid.uuid4()).upper()
-        filename = f"comprovante-ibe-{fundo_nome}-{branch_code}-{account_number}-{file_uuid}.pdf"
+        filename = f"comprovante-ibe-{self.fundo_nome}-{branch_code}-{account_number}-{file_uuid}.pdf"
         filepath = os.path.join(pasta_saida, filename)
         
         try:
