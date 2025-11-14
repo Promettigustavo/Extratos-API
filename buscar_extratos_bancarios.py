@@ -1123,15 +1123,6 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                 saldo = cliente.buscar_saldo(branch_code, account_number)
                 print(f"💰 Saldo obtido: {saldo}")
                 
-                # FALLBACK: Se não conseguir obter saldo via API, simular
-                if not saldo:
-                    print(f"🔄 FALLBACK: Simulando saldo...")
-                    saldo = {
-                        "availableAmount": "0.00",
-                        "blockedAmount": "0.00", 
-                        "automaticallyInvestedAmount": "0.00"
-                    }
-                
                 # Buscar transações
                 transacoes = cliente.buscar_transacoes(
                     branch_code, 
@@ -1141,34 +1132,14 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                 )
                 
                 print(f"📊 Transações recebidas da API: {len(transacoes) if transacoes else 0}")
-                
-                # FALLBACK: Para conta 130176356 do CONDOLIVRE, usar dados conhecidos
-                if not transacoes and fundo_id == "CONDOLIVRE FIDC" and account_number == "130176356":
-                    print(f"🔄 FALLBACK: Usando transações conhecidas da conta 130176356...")
-                    transacoes = [
-                        {
-                            "transactionDate": "2025-11-12",
-                            "transactionName": "TED RECEBIDA                       44650156000193",
-                            "documentNumber": "000000",
-                            "amount": "202523.67",
-                            "creditDebitType": "CREDITO"
-                        },
-                        {
-                            "transactionDate": "2025-11-13",
-                            "transactionName": "TRANSF VALORES P/C/C MESMO TITULAR PARA: 2271.13.017871-2",
-                            "documentNumber": "551791", 
-                            "amount": "202523.67",
-                            "creditDebitType": "DEBITO"
-                        }
-                    ]
-                    print(f"   ✅ Usando 2 transações conhecidas do arquivo de evidência")
+                if transacoes and len(transacoes) > 0:
+                    print(f"   Primeira transação: {transacoes[0]}")
                     fundo_teve_transacoes = True
                 
                 # SEMPRE exportar Excel, mesmo sem transações (mostra saldo)
                 # Se não houver transações, criar lista vazia para incluir apenas saldo
                 transacoes_para_export = transacoes if transacoes else []
                 
-                print(f"   📄 Gerando Excel com {len(transacoes_para_export)} transações...")
                 arquivo_excel = cliente.exportar_transacoes_excel(
                     transacoes_para_export,
                     branch_code,
@@ -1180,12 +1151,9 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                 if arquivo_excel:
                     arquivos_gerados += 1
                     print(f"   ✅ Excel gerado: {os.path.basename(arquivo_excel)}")
-                else:
-                    print(f"   ❌ ERRO: Falha ao gerar Excel!")
                 
                 # Gerar PDF se solicitado (mesmo sem transações)
                 if gerar_pdf:
-                    print(f"   📄 Gerando PDF com {len(transacoes_para_export)} transações...")
                     arquivo_pdf = cliente.gerar_pdf_extrato(
                         transacoes_para_export,
                         branch_code,
@@ -1197,8 +1165,6 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                     if arquivo_pdf:
                         arquivos_gerados += 1
                         print(f"   ✅ PDF gerado: {os.path.basename(arquivo_pdf)}")
-                    else:
-                        print(f"   ❌ ERRO: Falha ao gerar PDF!")
             
             # Relatório final do fundo
             print(f"\n📈 FUNDO {fundo_id} - PROCESSAMENTO CONCLUÍDO:")

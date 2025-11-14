@@ -396,9 +396,11 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         
         # Validar se há arquivos antes de continuar
         if len(arquivos_gerados) == 0:
-            st.warning("⚠️ Nenhum arquivo foi gerado. Verifique se os fundos selecionados têm contas cadastradas.")
-            st.session_state.processando = False
-            st.stop()
+            # NÃO usar st.stop() aqui pois impede de mostrar os logs!
+            # Apenas definir uma flag para mostrar warning depois dos logs
+            nenhum_arquivo_gerado = True
+        else:
+            nenhum_arquivo_gerado = False
             
     except Exception as e:
         progress_bar.progress(1.0)
@@ -421,12 +423,18 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         
         # Liberar estado de processamento
         st.session_state.processando = False
+        
+        # Mostrar warning DEPOIS dos logs se não há arquivos
+        if 'nenhum_arquivo_gerado' in locals() and nenhum_arquivo_gerado:
+            st.warning("⚠️ Nenhum arquivo foi gerado. Verifique se os fundos selecionados têm contas cadastradas.")
+            st.warning("📋 **Consulte os logs acima para entender o que aconteceu durante o processamento.**")
     
-    # Mostrar resultados
-    st.markdown("---")
-    
-    if arquivos_gerados:
-        st.markdown('<div class="section-title">📥 Arquivos Gerados</div>', unsafe_allow_html=True)
+    # Mostrar resultados apenas se há arquivos gerados
+    if not ('nenhum_arquivo_gerado' in locals() and nenhum_arquivo_gerado):
+        st.markdown("---")
+        
+        if arquivos_gerados:
+            st.markdown('<div class="section-title">📥 Arquivos Gerados</div>', unsafe_allow_html=True)
         
         st.success(f"🎉 Total: {len(arquivos_gerados)} arquivo(s) gerado(s) com sucesso!")
         
