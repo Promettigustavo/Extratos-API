@@ -365,7 +365,9 @@ class SantanderExtratosBancarios:
         
         data_hoje = datetime.now()
         data_formatada = data_hoje.strftime("%d de %B de %Y")
-        filename = f"exportar-Santander - Extrato {data_formatada}-{branch_code}-{account_number}.xlsx"
+        # Incluir nome do fundo no arquivo para facilitar organização
+        fundo_nome = self.creds.get('nome', self.fundo_id)
+        filename = f"exportar-Santander - Extrato {data_formatada}-{fundo_nome}-{branch_code}-{account_number}.xlsx"
         filepath = os.path.join(pasta_saida, filename)
         
         # Criar estrutura de dados no formato IBE
@@ -502,9 +504,10 @@ class SantanderExtratosBancarios:
         if not pasta_saida:
             pasta_saida = os.getcwd()
         
-        # Nome do arquivo: comprovante-ibe-{UUID}.pdf
+        # Nome do arquivo com nome do fundo: comprovante-ibe-{FUNDO}-{UUID}.pdf
+        fundo_nome = self.creds.get('nome', self.fundo_id)
         file_uuid = str(uuid.uuid4()).upper()
-        filename = f"comprovante-ibe-{file_uuid}.pdf"
+        filename = f"comprovante-ibe-{fundo_nome}-{branch_code}-{account_number}-{file_uuid}.pdf"
         filepath = os.path.join(pasta_saida, filename)
         
         try:

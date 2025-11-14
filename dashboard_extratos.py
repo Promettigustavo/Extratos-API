@@ -447,17 +447,28 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             # Identificar fundo pelo nome do arquivo
             nome = os.path.basename(arquivo)
             
-            # Buscar qual fundo corresponde ao arquivo
-            # (assumindo que o arquivo tem agência/conta ou foi gerado para um fundo específico)
-            fundo_nome = "Geral"  # Default
+            # Extrair nome do fundo do nome do arquivo
+            fundo_nome = "Sem_Fundo"  # Default
             
-            # Se temos apenas 1 fundo selecionado, usar esse
-            if len(fundos_selecionados) == 1:
+            # Padrão Excel: exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx
+            # Padrão PDF: comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
+            
+            if nome.startswith('exportar-Santander'):
+                # Excel: extrair terceiro segmento após último '-' antes de .xlsx
+                partes = nome.replace('.xlsx', '').split('-')
+                if len(partes) >= 3:
+                    # partes[-3] = FUNDO, partes[-2] = AGENCIA, partes[-1] = CONTA
+                    fundo_nome = partes[-3].strip()
+            elif nome.startswith('comprovante-ibe'):
+                # PDF: formato comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
+                partes = nome.replace('.pdf', '').split('-')
+                if len(partes) >= 4:
+                    # partes[2] = FUNDO
+                    fundo_nome = partes[2].strip()
+            
+            # Se não conseguiu extrair, tentar usar fundos_selecionados
+            if fundo_nome == "Sem_Fundo" and len(fundos_selecionados) == 1:
                 fundo_nome = fundos_selecionados[0]
-            else:
-                # Tentar identificar pelo arquivo (agência/conta)
-                # Por enquanto, agrupar todos em "Multiplos_Fundos"
-                fundo_nome = "Multiplos_Fundos"
             
             if fundo_nome not in arquivos_por_fundo:
                 arquivos_por_fundo[fundo_nome] = []
