@@ -132,6 +132,14 @@ class SantanderExtratosBancarios:
         
         print(f"\n🏦 Listando contas bancárias do fundo {self.fundo_id}...")
         
+        # Debug: verificar certificados
+        from pathlib import Path
+        cert_exists = Path(self.cert_path).exists()
+        key_exists = Path(self.key_path).exists()
+        if not cert_exists or not key_exists:
+            print(f"⚠️  Certificado existe: {cert_exists} ({self.cert_path})")
+            print(f"⚠️  Chave existe: {key_exists} ({self.key_path})")
+        
         url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/banks/{BANK_ID}/accounts"
         
         headers = {
