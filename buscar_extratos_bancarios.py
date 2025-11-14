@@ -247,14 +247,26 @@ class SantanderExtratosBancarios:
                 
                 if response.status_code == 200:
                     data = response.json()
+                    
+                    # DEBUG: Mostrar resposta completa na primeira página
+                    if pagina == 1:
+                        print(f"   📋 DEBUG - Resposta da API (página 1):")
+                        print(f"   Keys disponíveis: {list(data.keys())}")
+                        print(f"   Resposta completa: {str(data)[:1000]}")
+                    
                     transacoes_pagina = data.get("_content", [])
                     
                     if not transacoes_pagina:
                         # Não há mais transações
+                        print(f"   ⚠️ Página {pagina} retornou 0 transações. Encerrando busca.")
                         break
                     
                     todas_transacoes.extend(transacoes_pagina)
                     print(f"   Página {pagina}: {len(transacoes_pagina)} transações | Total: {len(todas_transacoes)}")
+                    
+                    # DEBUG: Mostrar primeira transação
+                    if pagina == 1 and len(transacoes_pagina) > 0:
+                        print(f"   📋 Exemplo de transação: {transacoes_pagina[0]}")
                     
                     # Verificar se há próxima página
                     links = data.get("_links", {})
@@ -422,6 +434,11 @@ class SantanderExtratosBancarios:
                     pass
             
             dados.append([data, None, historico, documento, valor, saldo])
+        
+        # DEBUG: Mostrar quantas linhas foram adicionadas
+        print(f"📊 Total de linhas no DataFrame: {len(dados)} (incluindo 3 linhas de cabeçalho)")
+        if len(dados) > 3:
+            print(f"   Exemplo de linha de dados: {dados[3]}")
         
         # Criar DataFrame
         df = pd.DataFrame(dados)
@@ -694,6 +711,11 @@ class SantanderExtratosBancarios:
                 documento = trans.get('documentNumber', '')
                 valor = float(trans.get('amount', 0))
                 tipo = trans.get('creditDebitType', '')
+                
+                # DEBUG na primeira transação
+                if len(table_data) == 2:  # Logo após cabeçalho e saldo anterior
+                    print(f"   📋 DEBUG PDF - Primeira transação:")
+                    print(f"      Data: {data}, Histórico: {historico}, Valor: {valor}, Tipo: {tipo}")
                 
                 # Ajustar sinal
                 if tipo == 'DEBITO':
