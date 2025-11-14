@@ -72,6 +72,11 @@ class SantanderExtratosBancarios:
         self.token = None
         self.token_expira = None
         
+        # Debug: mostrar caminhos dos certificados
+        print(f"🔐 Certificados configurados:")
+        print(f"   cert_path: {self.cert_path}")
+        print(f"   key_path: {self.key_path}")
+        
     def obter_token_acesso(self):
         """Obtém token OAuth2 para autenticação"""
         # Verificar se token ainda é válido
