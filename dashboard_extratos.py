@@ -443,7 +443,7 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         st.markdown("---")
         
         # Criar arquivo ZIP em memória com estrutura de pastas
-        from zipfile import ZipFile
+        from zipfile import ZipFile, ZIP_DEFLATED
         from io import BytesIO
         import re
         
@@ -499,7 +499,7 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             arquivos_por_fundo[fundo_nome].append(arquivo)
         
         zip_buffer = BytesIO()
-        with ZipFile(zip_buffer, 'w') as zip_file:
+        with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zip_file:
             for fundo, arquivos in arquivos_por_fundo.items():
                 # Criar nome de pasta seguro (sem caracteres especiais)
                 fundo_safe = re.sub(r'[^\w\s-]', '', fundo).strip().replace(' ', '_')
@@ -508,11 +508,25 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                 periodo_str = f"{data_inicial.strftime('%d-%m-%Y')}_a_{data_final.strftime('%d-%m-%Y')}"
                 
                 for arquivo in arquivos:
+                    # Verificar se arquivo existe antes de adicionar
+                    if not os.path.exists(arquivo):
+                        print(f"⚠️ Arquivo não encontrado: {arquivo}")
+                        continue
+                    
                     # Estrutura: Fundo/Periodo/arquivo.ext
                     caminho_zip = f"{fundo_safe}/{periodo_str}/{os.path.basename(arquivo)}"
-                    zip_file.write(arquivo, caminho_zip)
+                    
+                    try:
+                        zip_file.write(arquivo, caminho_zip)
+                        print(f"✅ Adicionado ao ZIP: {caminho_zip}")
+                    except Exception as e:
+                        print(f"❌ Erro ao adicionar {arquivo} ao ZIP: {e}")
         
         zip_buffer.seek(0)
+        
+        # Verificar tamanho do ZIP
+        zip_size = len(zip_buffer.getvalue())
+        print(f"\n📦 ZIP criado com sucesso: {zip_size} bytes")
         
         # Nome do arquivo ZIP
         data_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -523,12 +537,12 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         with col_btn2:
             st.download_button(
                 label="📦 Baixar Todos os Comprovantes (ZIP)",
-                data=zip_buffer,
+                data=zip_buffer.getvalue(),  # Usar getvalue() ao invés do buffer direto
                 file_name=nome_zip,
                 mime="application/zip",
                 use_container_width=True
             )
-            st.caption(f"Download: {nome_zip} ({len(arquivos_gerados)} arquivo(s))")
+            st.caption(f"Download: {nome_zip} ({len(arquivos_gerados)} arquivo(s) - {zip_size/1024:.1f} KB)")
     else:
         st.markdown('<div class="section-title">⚠️ Atenção</div>', unsafe_allow_html=True)
         st.warning("Nenhum arquivo foi detectado como gerado recentemente.")
