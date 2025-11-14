@@ -329,24 +329,22 @@ class SantanderExtratosBancarios:
             print(f"❌ Exceção ao buscar saldo: {e}")
             return None
     
-    def exportar_transacoes_excel(self, transacoes, branch_code, account_number, pasta_saida=None):
+    def exportar_transacoes_excel(self, transacoes, branch_code, account_number, pasta_saida=None, saldo_info=None):
         """
         Exporta transações para arquivo Excel no formato Santander IBE
         
         Args:
-            transacoes: Lista de transações
+            transacoes: Lista de transações (pode ser vazia)
             branch_code: Código da agência
             account_number: Número da conta
             pasta_saida: Pasta para salvar (padrão: diretório atual)
+            saldo_info: Informações de saldo (opcional)
         
         Returns:
             Caminho do arquivo gerado ou None
         """
-        if not transacoes:
-            print("⚠️  Nenhuma transação para exportar")
-            return None
-        
-        print(f"\n📝 Exportando {len(transacoes)} transações para Excel...")
+        num_transacoes = len(transacoes) if transacoes else 0
+        print(f"\n📝 Exportando {num_transacoes} transação(ões) para Excel...")
         
         # Definir pasta de saída
         if not pasta_saida:
@@ -480,25 +478,23 @@ class SantanderExtratosBancarios:
             traceback.print_exc()
             return None
     
-    def gerar_pdf_extrato(self, transacoes, branch_code, account_number, pasta_saida=None):
+    def gerar_pdf_extrato(self, transacoes, branch_code, account_number, pasta_saida=None, saldo_info=None):
         """
         Gera PDF do extrato no formato IBE (Internet Banking Empresarial) Santander
         Replica exatamente o layout do exemplo do Santander IBE
         
         Args:
-            transacoes: Lista de transações
+            transacoes: Lista de transações (pode ser vazia)
             branch_code: Código da agência
             account_number: Número da conta
             pasta_saida: Pasta para salvar (padrão: diretório atual)
+            saldo_info: Informações de saldo (opcional)
         
         Returns:
             Caminho do arquivo gerado ou None
         """
-        if not transacoes:
-            print("⚠️  Nenhuma transação para gerar PDF")
-            return None
-        
-        print(f"\n📄 Gerando PDF do extrato...")
+        num_transacoes = len(transacoes) if transacoes else 0
+        print(f"\n📄 Gerando PDF com {num_transacoes} transação(ões)...")
         
         # Definir pasta de saída
         if not pasta_saida:
@@ -873,6 +869,11 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
     
     print(f"\n📋 Fundos a processar: {', '.join(fundos)}")
     
+    # Rastreamento de resultados
+    fundos_com_transacoes = []
+    fundos_sem_transacoes = []
+    fundos_com_erro = []
+    
     # Processar cada fundo
     for fundo_id in fundos:
         print(f"\n{'='*80}")
@@ -888,7 +889,11 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
             
             if not contas:
                 print(f"⚠️  Nenhuma conta encontrada para o fundo {fundo_id}")
+                fundos_com_erro.append(fundo_id)
                 continue
+            
+            # Flag para rastrear se o fundo teve alguma transação
+            fundo_teve_transacoes = False
             
             # Processar cada conta
             for conta in contas:
@@ -910,32 +915,72 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                     data_final=data_final
                 )
                 
-                # Exportar para Excel
-                if transacoes:
-                    cliente.exportar_transacoes_excel(
-                        transacoes,
+                # Atualizar flag se houver transações
+                if transacoes and len(transacoes) > 0:
+                    fundo_teve_transacoes = True
+                
+                # SEMPRE exportar Excel, mesmo sem transações (mostra saldo)
+                # Se não houver transações, criar lista vazia para incluir apenas saldo
+                transacoes_para_export = transacoes if transacoes else []
+                
+                cliente.exportar_transacoes_excel(
+                    transacoes_para_export,
+                    branch_code,
+                    account_number,
+                    pasta_saida=pasta_saida,
+                    saldo_info=saldo  # Passar info de saldo
+                )
+                
+                # Gerar PDF se solicitado (mesmo sem transações)
+                if gerar_pdf:
+                    cliente.gerar_pdf_extrato(
+                        transacoes_para_export,
                         branch_code,
                         account_number,
-                        pasta_saida=pasta_saida
+                        pasta_saida=pasta_saida,
+                        saldo_info=saldo  # Passar info de saldo
                     )
-                    
-                    # Gerar PDF se solicitado
-                    if gerar_pdf:
-                        cliente.gerar_pdf_extrato(
-                            transacoes,
-                            branch_code,
-                            account_number,
-                            pasta_saida=pasta_saida
-                        )
+            
+            # Adicionar fundo na lista apropriada
+            if fundo_teve_transacoes:
+                fundos_com_transacoes.append(fundo_id)
+            else:
+                fundos_sem_transacoes.append(fundo_id)
         
         except Exception as e:
             print(f"\n❌ Erro ao processar fundo {fundo_id}: {e}")
+            fundos_com_erro.append(fundo_id)
             import traceback
             traceback.print_exc()
     
     print("\n" + "="*80)
     print("PROCESSAMENTO CONCLUÍDO")
     print("="*80)
+    
+    # Relatório final
+    print("\n📊 RESUMO DO PROCESSAMENTO")
+    print("-"*80)
+    
+    if fundos_com_transacoes:
+        print(f"\n✅ Fundos COM transações no período ({len(fundos_com_transacoes)}):")
+        for fundo in fundos_com_transacoes:
+            fundo_nome = SANTANDER_FUNDOS.get(fundo, {}).get('nome', fundo)
+            print(f"   • {fundo_nome}")
+    
+    if fundos_sem_transacoes:
+        print(f"\n⚠️  Fundos SEM transações no período ({len(fundos_sem_transacoes)}):")
+        for fundo in fundos_sem_transacoes:
+            fundo_nome = SANTANDER_FUNDOS.get(fundo, {}).get('nome', fundo)
+            print(f"   • {fundo_nome}")
+        print("\n   💡 Arquivos foram gerados mostrando apenas os saldos atuais")
+    
+    if fundos_com_erro:
+        print(f"\n❌ Fundos com ERRO ({len(fundos_com_erro)}):")
+        for fundo in fundos_com_erro:
+            fundo_nome = SANTANDER_FUNDOS.get(fundo, {}).get('nome', fundo)
+            print(f"   • {fundo_nome}")
+    
+    print("\n" + "="*80)
 
 
 if __name__ == "__main__":
