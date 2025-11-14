@@ -43,6 +43,10 @@ def get_fundos_config():
             cert_path.write_text(cert_content)
             key_path.write_text(key_content)
             
+            # Verificar se arquivos foram criados
+            print(f"📄 Certificado salvo: {cert_path} ({cert_path.stat().st_size} bytes)")
+            print(f"🔑 Chave privada salva: {key_path} ({key_path.stat().st_size} bytes)")
+            
             # Construir dicionário de fundos a partir dos secrets
             fundos = {}
             for key in st.secrets["santander_fundos"]:
@@ -167,6 +171,13 @@ except ImportError:
                 "Authorization": f"Basic {auth_b64}",
                 "Content-Type": "application/x-www-form-urlencoded"
             }
+            
+            # Debug: verificar se certificados existem
+            from pathlib import Path
+            cert_exists = Path(self.cert_path).exists()
+            key_exists = Path(self.key_path).exists()
+            print(f"🔐 Certificado existe: {cert_exists} ({self.cert_path})")
+            print(f"🔑 Chave existe: {key_exists} ({self.key_path})")
             
             response = requests.post(
                 self.TOKEN_URL,
