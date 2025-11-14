@@ -325,6 +325,12 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         progress_bar.progress(0.8)
         status_text.text("🔍 Buscando arquivos gerados...")
         
+        # Forçar flush/sync dos arquivos antes de criar ZIP
+        import sys
+        sys.stdout.flush()
+        import time
+        time.sleep(0.5)  # Pequena pausa para garantir que arquivos foram escritos
+        
         # Buscar arquivos gerados nos últimos 15 minutos
         import glob
         
@@ -527,6 +533,21 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         # Verificar tamanho do ZIP
         zip_size = len(zip_buffer.getvalue())
         print(f"\n📦 ZIP criado com sucesso: {zip_size} bytes")
+        
+        # Testar integridade do ZIP
+        try:
+            zip_buffer.seek(0)
+            with ZipFile(zip_buffer, 'r') as test_zip:
+                zip_info = test_zip.namelist()
+                print(f"✅ ZIP válido com {len(zip_info)} arquivo(s)")
+                for info in zip_info[:5]:  # Mostrar os primeiros 5
+                    print(f"   - {info}")
+                if len(zip_info) > 5:
+                    print(f"   ... e mais {len(zip_info) - 5} arquivo(s)")
+            zip_buffer.seek(0)  # Voltar ao início após teste
+        except Exception as e:
+            print(f"❌ ERRO: ZIP está corrompido! {e}")
+            st.error(f"Erro ao criar ZIP: {e}")
         
         # Nome do arquivo ZIP
         data_hora = datetime.now().strftime("%Y%m%d_%H%M%S")

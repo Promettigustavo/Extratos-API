@@ -472,6 +472,14 @@ class SantanderExtratosBancarios:
             
             print(f"✅ Extrato salvo em: {filename}")
             print(f"   Caminho completo: {filepath}")
+            
+            # Verificar se arquivo foi criado
+            if os.path.exists(filepath):
+                tamanho = os.path.getsize(filepath)
+                print(f"   Tamanho: {tamanho} bytes")
+            else:
+                print(f"   ⚠️ AVISO: Arquivo não encontrado após salvar!")
+            
             return filepath
         except Exception as e:
             print(f"❌ Erro ao salvar Excel: {e}")
@@ -837,6 +845,14 @@ class SantanderExtratosBancarios:
             
             print(f"✅ PDF gerado: {filename}")
             print(f"   Caminho completo: {filepath}")
+            
+            # Verificar se arquivo foi criado
+            if os.path.exists(filepath):
+                tamanho = os.path.getsize(filepath)
+                print(f"   Tamanho: {tamanho} bytes")
+            else:
+                print(f"   ⚠️ AVISO: Arquivo não encontrado após salvar!")
+            
             return filepath
             
         except Exception as e:
