@@ -101,7 +101,7 @@ class SantanderExtratosBancarios:
         
         data = {
             "grant_type": "client_credentials",
-            "scope": "open_banking_balances_statement"
+            "scope": "account_information.accounts.read account_information.balances.read account_information.transactions.read"
         }
         
         try:
@@ -163,6 +163,11 @@ class SantanderExtratosBancarios:
             "page-size": "50"
         }
         
+        # Log detalhado para debug
+        print(f"   🔗 URL: {url}")
+        print(f"   🗂️ Headers: X-Application-Key={self.client_id[:10]}..., X-CNPJ={self.cnpj}")
+        print(f"   📊 Params: {params}")
+        
         try:
             response = requests.get(
                 url,
@@ -174,13 +179,44 @@ class SantanderExtratosBancarios:
             
             if response.status_code == 200:
                 data = response.json()
-                # O endpoint /accounts retorna as contas em data.accounts
-                contas = data.get("data", {}).get("accounts", [])
+                
+                # Log da resposta completa para debug
+                print(f"   📋 DEBUG - Resposta completa da API:")
+                print(f"   {json.dumps(data, indent=2)[:1000]}...")
+                
+                # Tentar diferentes estruturas de resposta
+                contas = []
+                
+                # Estrutura 1: data.accounts (nova API)
+                if "data" in data and isinstance(data["data"], dict) and "accounts" in data["data"]:
+                    contas = data["data"]["accounts"]
+                    print(f"   ✅ Estrutura 1 (data.accounts): {len(contas)} contas")
+                
+                # Estrutura 2: data como lista direta
+                elif "data" in data and isinstance(data["data"], list):
+                    contas = data["data"]
+                    print(f"   ✅ Estrutura 2 (data lista): {len(contas)} contas")
+                
+                # Estrutura 3: _content (API antiga)
+                elif "_content" in data:
+                    contas = data["_content"]
+                    print(f"   ✅ Estrutura 3 (_content): {len(contas)} contas")
+                
+                # Estrutura 4: accounts direto
+                elif "accounts" in data:
+                    contas = data["accounts"]
+                    print(f"   ✅ Estrutura 4 (accounts direto): {len(contas)} contas")
+                
+                else:
+                    print(f"   ❌ Estrutura desconhecida na resposta!")
+                    print(f"   Keys disponíveis: {list(data.keys())}")
+                
                 print(f"✅ {len(contas)} conta(s) encontrada(s)")
                 
                 # Debug: mostrar resposta completa se não encontrar contas
                 if len(contas) == 0:
-                    print(f"   🔍 DEBUG - Resposta da API: {json.dumps(data, indent=2)}")
+                    print(f"   🔍 ATENÇÃO: Nenhuma conta retornada pela API!")
+                    print(f"   Resposta completa: {json.dumps(data, indent=2)}")
                 
                 for conta in contas:
                     branch_code = conta.get('branchCode') or conta.get('agencyCode')
@@ -196,7 +232,20 @@ class SantanderExtratosBancarios:
                 return contas
             else:
                 print(f"❌ Erro ao listar contas: {response.status_code}")
-                print(f"   Resposta: {response.text[:500]}")
+                print(f"   URL chamada: {url}")
+                print(f"   Headers enviados: {json.dumps({k: v[:20] + '...' if len(v) > 20 else v for k, v in headers.items()}, indent=2)}")
+                print(f"   Parâmetros: {params}")
+                print(f"   Resposta completa: {response.text}")
+                
+                # Tentar interpretar erro
+                try:
+                    error_data = response.json()
+                    if "errors" in error_data:
+                        for error in error_data["errors"]:
+                            print(f"   🚨 Erro API: {error.get('title', 'N/A')} - {error.get('detail', 'N/A')}")
+                except:
+                    pass
+                
                 return []
                 
         except Exception as e:
