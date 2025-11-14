@@ -529,12 +529,49 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         try:
             # ZIP_STORED = sem compressão (mais confiável)
             with ZipFile(zip_buffer, 'w', ZIP_STORED) as zip_file:
-                for arquivo in arquivos_gerados:
+                for idx, arquivo in enumerate(arquivos_gerados, 1):
                     if os.path.exists(arquivo):
-                        # Nome simples - só o nome do arquivo, SEM pastas
-                        nome_arquivo = os.path.basename(arquivo)
-                        zip_file.write(arquivo, nome_arquivo)
-                        print(f"   ✅ Adicionado: {nome_arquivo[:70]}")
+                        nome_original = os.path.basename(arquivo)
+                        
+                        # Encurtar nome para evitar "caminho muito longo" no Windows
+                        # Limite Windows: 260 caracteres totais (incluindo caminho)
+                        # Vamos usar nomes curtos: Extrato_001.xlsx, Comprovante_001.pdf
+                        
+                        extensao = os.path.splitext(nome_original)[1]  # .xlsx ou .pdf
+                        
+                        if 'exportar-Santander' in nome_original or 'Extrato' in nome_original:
+                            # Extrair fundo, agência e conta do nome original
+                            # Formato: exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx
+                            partes = nome_original.replace('exportar-Santander - Extrato ', '').replace(extensao, '').split('-')
+                            if len(partes) >= 3:
+                                fundo = partes[-3][:20]  # Limitar a 20 caracteres
+                                agencia = partes[-2]
+                                conta = partes[-1]
+                                nome_curto = f"Extrato_{fundo}_{agencia}_{conta}{extensao}"
+                            else:
+                                nome_curto = f"Extrato_{idx:03d}{extensao}"
+                        
+                        elif 'comprovante-ibe' in nome_original:
+                            # Formato: comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
+                            partes = nome_original.replace('comprovante-ibe-', '').replace(extensao, '').split('-')
+                            if len(partes) >= 3:
+                                fundo = partes[0][:20]  # Limitar a 20 caracteres
+                                agencia = partes[1]
+                                conta = partes[2]
+                                nome_curto = f"Comprov_{fundo}_{agencia}_{conta}{extensao}"
+                            else:
+                                nome_curto = f"Comprovante_{idx:03d}{extensao}"
+                        else:
+                            # Nome genérico se não reconhecer o padrão
+                            nome_curto = f"Arquivo_{idx:03d}{extensao}"
+                        
+                        # Garantir que não ultrapassa 100 caracteres
+                        if len(nome_curto) > 100:
+                            nome_base = os.path.splitext(nome_curto)[0][:95]
+                            nome_curto = f"{nome_base}{extensao}"
+                        
+                        zip_file.write(arquivo, nome_curto)
+                        print(f"   ✅ {nome_original[:50]} → {nome_curto}")
             
             print(f"\n✅ ZIP criado com {len(arquivos_gerados)} arquivo(s)")
             
