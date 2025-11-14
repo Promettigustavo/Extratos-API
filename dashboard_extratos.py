@@ -547,27 +547,16 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                             print(f"   ⚠️ Arquivo não encontrado: {arquivo}")
                             continue
                         
-                        # Estrutura: Fundo/Periodo/arquivo.ext
+                        # Estrutura simplificada: Periodo/arquivo.ext (SEM pasta de fundo)
+                        # Isso evita problemas de caminho muito longo
                         nome_arquivo = os.path.basename(arquivo)
-                        
-                        # CRÍTICO: Simplificar nome do arquivo para evitar problemas
-                        # Alguns sistemas têm limite de 260 caracteres no caminho total
-                        # Nome do fundo já pode ter 100 chars, período 23 chars = 123 chars base
-                        # Deixar no máximo 130 chars para o nome do arquivo
-                        if len(nome_arquivo) > 130:
-                            # Preservar extensão
-                            extensao = nome_arquivo[-5:] if '.' in nome_arquivo[-5:] else ''
-                            nome_base = nome_arquivo[:-5] if extensao else nome_arquivo
-                            nome_arquivo = nome_base[:125] + extensao
-                            print(f"   ⚠️ Nome truncado: {nome_arquivo[:50]}...")
                         
                         # Garantir que caminho use apenas ASCII/UTF-8 válido
                         try:
-                            caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_arquivo}"
+                            # SIMPLIFICADO: Apenas período/arquivo (sem pasta de fundo)
+                            caminho_zip = f"{periodo_str}/{nome_arquivo}"
                             # Testar se o caminho é válido
                             caminho_zip.encode('utf-8')
-                            
-                            # Verificar comprimento total do caminho (limite conservador de 200 chars)
                             if len(caminho_zip) > 200:
                                 print(f"   ⚠️ Caminho muito longo ({len(caminho_zip)} chars), pulando")
                                 continue
