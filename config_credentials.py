@@ -109,7 +109,7 @@ except ImportError:
     class SantanderAuth:
         """Classe de autenticação OAuth2 para Santander"""
         
-        TOKEN_URL = "https://api-auth.santander.com.br/auth/oauth/v2/token"
+        TOKEN_URL = "https://trust-open.api.santander.com.br/auth/oauth/v2/token"
         SCOPES = {
             "comprovantes": "open_banking_payment_receipts",
             "extratos": "open_banking_balances_statement"
