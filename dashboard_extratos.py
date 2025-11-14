@@ -509,65 +509,105 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             print(f"   - {fundo}: {len(arquivos_por_fundo[fundo])} arquivo(s)")
         
         zip_buffer = BytesIO()
-        with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zip_file:
-            for fundo, arquivos in arquivos_por_fundo.items():
-                # Criar nome de pasta seguro (sem caracteres especiais)
-                fundo_safe = re.sub(r'[^\w\s-]', '', fundo).strip().replace(' ', '_')
-                
-                # Período para nome da subpasta
-                periodo_str = f"{data_inicial.strftime('%d-%m-%Y')}_a_{data_final.strftime('%d-%m-%Y')}"
-                
-                for arquivo in arquivos:
-                    # Verificar se arquivo existe antes de adicionar
-                    if not os.path.exists(arquivo):
-                        print(f"⚠️ Arquivo não encontrado: {arquivo}")
-                        continue
-                    
-                    # Estrutura: Fundo/Periodo/arquivo.ext
-                    caminho_zip = f"{fundo_safe}/{periodo_str}/{os.path.basename(arquivo)}"
-                    
-                    try:
-                        zip_file.write(arquivo, caminho_zip)
-                        print(f"✅ Adicionado ao ZIP: {caminho_zip}")
-                    except Exception as e:
-                        print(f"❌ Erro ao adicionar {arquivo} ao ZIP: {e}")
+        arquivos_adicionados = 0
         
-        zip_buffer.seek(0)
-        
-        # Verificar tamanho do ZIP
-        zip_size = len(zip_buffer.getvalue())
-        print(f"\n📦 ZIP criado com sucesso: {zip_size} bytes")
-        
-        # Testar integridade do ZIP
         try:
-            zip_buffer.seek(0)
-            with ZipFile(zip_buffer, 'r') as test_zip:
-                zip_info = test_zip.namelist()
-                print(f"✅ ZIP válido com {len(zip_info)} arquivo(s)")
-                for info in zip_info[:5]:  # Mostrar os primeiros 5
-                    print(f"   - {info}")
-                if len(zip_info) > 5:
-                    print(f"   ... e mais {len(zip_info) - 5} arquivo(s)")
-            zip_buffer.seek(0)  # Voltar ao início após teste
+            with ZipFile(zip_buffer, 'w', ZIP_DEFLATED, allowZip64=True) as zip_file:
+                for fundo, arquivos in arquivos_por_fundo.items():
+                    # Criar nome de pasta seguro (sem caracteres especiais)
+                    # Remover TODOS caracteres problemáticos
+                    fundo_safe = fundo.strip()
+                    fundo_safe = re.sub(r'[^\w\s-]', '', fundo_safe)  # Remove caracteres especiais
+                    fundo_safe = re.sub(r'\s+', '_', fundo_safe)  # Espaços -> underscore
+                    fundo_safe = re.sub(r'_+', '_', fundo_safe)  # Múltiplos underscores -> um
+                    fundo_safe = fundo_safe.strip('_')  # Remove underscores das pontas
+                    
+                    # Limitar tamanho do nome (max 100 chars)
+                    if len(fundo_safe) > 100:
+                        fundo_safe = fundo_safe[:100]
+                    
+                    print(f"\n📂 Processando fundo: {fundo_safe}")
+                    
+                    # Período para nome da subpasta
+                    periodo_str = f"{data_inicial.strftime('%d-%m-%Y')}_a_{data_final.strftime('%d-%m-%Y')}"
+                    
+                    for arquivo in arquivos:
+                        # Verificar se arquivo existe antes de adicionar
+                        if not os.path.exists(arquivo):
+                            print(f"   ⚠️ Arquivo não encontrado: {arquivo}")
+                            continue
+                        
+                        # Estrutura: Fundo/Periodo/arquivo.ext
+                        nome_arquivo = os.path.basename(arquivo)
+                        caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_arquivo}"
+                        
+                        try:
+                            zip_file.write(arquivo, caminho_zip)
+                            arquivos_adicionados += 1
+                            if arquivos_adicionados <= 10:  # Mostrar apenas os primeiros 10
+                                print(f"   ✅ {nome_arquivo}")
+                        except Exception as e:
+                            print(f"   ❌ ERRO ao adicionar {nome_arquivo}: {e}")
+                            import traceback
+                            traceback.print_exc()
+            
+            print(f"\n✅ {arquivos_adicionados} arquivo(s) adicionados ao ZIP")
+            
         except Exception as e:
-            print(f"❌ ERRO: ZIP está corrompido! {e}")
+            print(f"\n❌ ERRO CRÍTICO ao criar ZIP: {e}")
+            import traceback
+            traceback.print_exc()
             st.error(f"Erro ao criar ZIP: {e}")
+            zip_buffer = None
         
-        # Nome do arquivo ZIP
-        data_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
-        nome_zip = f"extratos_santander_{data_hora}.zip"
+        if zip_buffer:
+            zip_buffer.seek(0)
+        if zip_buffer:
+            zip_buffer.seek(0)
         
-        # Botão de download
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-        with col_btn2:
-            st.download_button(
-                label="📦 Baixar Todos os Comprovantes (ZIP)",
-                data=zip_buffer.getvalue(),  # Usar getvalue() ao invés do buffer direto
-                file_name=nome_zip,
-                mime="application/zip",
-                use_container_width=True
-            )
-            st.caption(f"Download: {nome_zip} ({len(arquivos_gerados)} arquivo(s) - {zip_size/1024:.1f} KB)")
+            # Verificar tamanho do ZIP
+            zip_size = len(zip_buffer.getvalue())
+            print(f"\n📦 ZIP criado com sucesso: {zip_size} bytes")
+            
+            # Testar integridade do ZIP
+            zip_valido = False
+            try:
+                zip_buffer.seek(0)
+                with ZipFile(zip_buffer, 'r') as test_zip:
+                    zip_info = test_zip.namelist()
+                    print(f"✅ ZIP válido com {len(zip_info)} arquivo(s)")
+                    for info in zip_info[:10]:  # Mostrar os primeiros 10
+                        print(f"   - {info}")
+                    if len(zip_info) > 10:
+                        print(f"   ... e mais {len(zip_info) - 10} arquivo(s)")
+                zip_buffer.seek(0)  # Voltar ao início após teste
+                zip_valido = True
+            except Exception as e:
+                print(f"❌ ERRO: ZIP está corrompido! {e}")
+                import traceback
+                traceback.print_exc()
+                st.error(f"ZIP inválido: {e}")
+            
+            # Nome do arquivo ZIP
+            data_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
+            nome_zip = f"extratos_santander_{data_hora}.zip"
+            
+            # Botão de download apenas se ZIP for válido
+            if zip_valido:
+                col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+                with col_btn2:
+                    st.download_button(
+                        label="📦 Baixar Todos os Comprovantes (ZIP)",
+                        data=zip_buffer.getvalue(),  # Usar getvalue() ao invés do buffer direto
+                        file_name=nome_zip,
+                        mime="application/zip",
+                        use_container_width=True
+                    )
+                    st.caption(f"Download: {nome_zip} ({len(arquivos_gerados)} arquivo(s) - {zip_size/1024:.1f} KB)")
+            else:
+                st.error("❌ Não foi possível criar o arquivo ZIP. Verifique os logs para mais detalhes.")
+        else:
+            st.error("❌ Erro ao criar ZIP. Verifique os logs para mais detalhes.")
     else:
         st.markdown('<div class="section-title">⚠️ Atenção</div>', unsafe_allow_html=True)
         st.warning("Nenhum arquivo foi detectado como gerado recentemente.")
