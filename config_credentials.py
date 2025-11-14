@@ -4,7 +4,6 @@ Usa st.secrets quando disponível, caso contrário carrega do arquivo local
 """
 
 import os
-import json
 from pathlib import Path
 import tempfile
 
@@ -25,9 +24,9 @@ def get_fundos_config():
     # Se estiver no Streamlit Cloud, usar secrets
     if HAS_STREAMLIT and hasattr(st, 'secrets'):
         try:
-            # Carregar fundos do secrets
-            fundos_json = st.secrets["santander"]["fundos"]
-            fundos = json.loads(fundos_json)
+            # Verificar se secrets estão configurados
+            if "santander_fundos" not in st.secrets:
+                raise KeyError("santander_fundos não encontrado nos secrets")
             
             # Criar diretório temporário para certificados
             cert_dir = Path(tempfile.gettempdir()) / "santander_certs"
@@ -37,15 +36,29 @@ def get_fundos_config():
             cert_path = cert_dir / "santander_cert.pem"
             key_path = cert_dir / "santander_key.pem"
             
-            cert_path.write_text(st.secrets["certificados"]["cert_pem"])
-            key_path.write_text(st.secrets["certificados"]["key_pem"])
+            # Processar certificados (remover \n e adicionar quebras de linha reais)
+            cert_content = st.secrets["santander_fundos"]["cert_pem"].replace("\\n", "\n")
+            key_content = st.secrets["santander_fundos"]["key_pem"].replace("\\n", "\n")
             
-            # Atualizar paths dos certificados em todos os fundos
-            for fundo_id in fundos:
-                fundos[fundo_id]["cert_path"] = str(cert_path)
-                fundos[fundo_id]["key_path"] = str(key_path)
+            cert_path.write_text(cert_content)
+            key_path.write_text(key_content)
             
+            # Construir dicionário de fundos a partir dos secrets
+            fundos = {}
+            for key in st.secrets["santander_fundos"]:
+                # Pular certificados
+                if key in ["cert_pem", "key_pem"]:
+                    continue
+                
+                fundo_config = dict(st.secrets["santander_fundos"][key])
+                fundo_config["cert_path"] = str(cert_path)
+                fundo_config["key_path"] = str(key_path)
+                
+                fundos[key] = fundo_config
+            
+            print(f"✅ {len(fundos)} fundos carregados dos secrets do Streamlit")
             return fundos
+            
         except Exception as e:
             print(f"⚠️ Erro ao carregar secrets: {e}")
             print("📁 Tentando carregar credenciais locais...")
@@ -53,6 +66,7 @@ def get_fundos_config():
     # Fallback: carregar do arquivo local
     try:
         from credenciais_bancos import SANTANDER_FUNDOS
+        print(f"✅ {len(SANTANDER_FUNDOS)} fundos carregados do arquivo local")
         return SANTANDER_FUNDOS
     except ImportError:
         raise Exception(
@@ -85,6 +99,7 @@ try:
 except ImportError:
     # Criar versão simplificada se não existir
     import requests
+    import base64
     from datetime import datetime, timedelta
     
     class SantanderAuth:
