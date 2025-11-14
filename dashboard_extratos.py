@@ -374,6 +374,12 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         print(f"\n📊 Total de arquivos detectados: {len(arquivos_gerados)}")
         print(f"   - Excel: {len([f for f in arquivos_gerados if f.endswith('.xlsx')])}")
         print(f"   - PDF: {len([f for f in arquivos_gerados if f.endswith('.pdf')])}")
+        
+        # Validar se há arquivos antes de continuar
+        if len(arquivos_gerados) == 0:
+            st.warning("⚠️ Nenhum arquivo foi gerado. Verifique se os fundos selecionados têm contas cadastradas.")
+            st.session_state.processando = False
+            st.stop()
             
     except Exception as e:
         progress_bar.progress(1.0)
@@ -486,15 +492,19 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             if nome.startswith('exportar-Santander'):
                 # Excel: formato "exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx"
                 # Extrair tudo entre último "de YYYY-" e penúltimo "-"
-                match = re.search(r'de \d{4}-(.+)-\d{4}-\d+\.xlsx$', nome)
+                match = re.search(r'de \d{4}-(.+?)-\d{4}-\d+\.xlsx$', nome)
                 if match:
                     fundo_nome = match.group(1).strip()
+                else:
+                    print(f"   ⚠️ Não conseguiu extrair fundo do Excel: {nome}")
             elif nome.startswith('comprovante-ibe'):
                 # PDF: formato "comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf"
-                # Extrair tudo entre "comprovante-ibe-" e os últimos 3 segmentos (AGENCIA-CONTA-UUID)
-                match = re.search(r'comprovante-ibe-(.+)-\d{4}-\d+-[A-F0-9\-]+\.pdf$', nome)
+                # UUID pode ter maiúsculas, minúsculas e hífens
+                match = re.search(r'comprovante-ibe-(.+?)-\d{4}-\d+-[A-Fa-f0-9\-]+\.pdf$', nome, re.IGNORECASE)
                 if match:
                     fundo_nome = match.group(1).strip()
+                else:
+                    print(f"   ⚠️ Não conseguiu extrair fundo do PDF: {nome}")
             
             # Se não conseguiu extrair, tentar usar fundos_selecionados
             if fundo_nome == "Sem_Fundo" and len(fundos_selecionados) == 1:
@@ -539,7 +549,15 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                         
                         # Estrutura: Fundo/Periodo/arquivo.ext
                         nome_arquivo = os.path.basename(arquivo)
-                        caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_arquivo}"
+                        
+                        # Garantir que caminho use apenas ASCII/UTF-8 válido
+                        try:
+                            caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_arquivo}"
+                            # Testar se o caminho é válido
+                            caminho_zip.encode('utf-8')
+                        except UnicodeEncodeError:
+                            print(f"   ⚠️ Nome inválido (encoding), pulando: {nome_arquivo}")
+                            continue
                         
                         try:
                             zip_file.write(arquivo, caminho_zip)
@@ -560,14 +578,19 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             st.error(f"Erro ao criar ZIP: {e}")
             zip_buffer = None
         
-        if zip_buffer:
-            zip_buffer.seek(0)
-        if zip_buffer:
+        if zip_buffer and arquivos_adicionados > 0:
             zip_buffer.seek(0)
         
             # Verificar tamanho do ZIP
-            zip_size = len(zip_buffer.getvalue())
-            print(f"\n📦 ZIP criado com sucesso: {zip_size} bytes")
+            try:
+                zip_size = len(zip_buffer.getvalue())
+                print(f"\n📦 ZIP criado com sucesso: {zip_size} bytes ({zip_size/1024:.1f} KB)")
+            except Exception as e:
+                print(f"❌ Erro ao obter tamanho do ZIP: {e}")
+                st.error(f"Erro ao verificar ZIP: {e}")
+                zip_buffer = None
+        
+        if zip_buffer:
             
             # Testar integridade do ZIP
             zip_valido = False
@@ -606,6 +629,8 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                     st.caption(f"Download: {nome_zip} ({len(arquivos_gerados)} arquivo(s) - {zip_size/1024:.1f} KB)")
             else:
                 st.error("❌ Não foi possível criar o arquivo ZIP. Verifique os logs para mais detalhes.")
+        elif arquivos_adicionados == 0:
+            st.warning("⚠️ Nenhum arquivo foi adicionado ao ZIP. Verifique se os arquivos foram gerados corretamente.")
         else:
             st.error("❌ Erro ao criar ZIP. Verifique os logs para mais detalhes.")
     else:
