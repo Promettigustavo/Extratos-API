@@ -655,6 +655,7 @@ class SantanderExtratosBancarios:
             
             # Calcular saldo
             saldo = 0
+            saldo_fmt = "0,00"  # Inicializar com valor padrão para evitar erro quando não há transações
             
             # Saldo anterior
             if transacoes:
@@ -766,18 +767,40 @@ class SantanderExtratosBancarios:
             elements.append(Spacer(1, 8))
             
             # ========== QUADRO DE SALDO ==========
+            # Usar saldo_info se disponível, senão usar saldo calculado
+            if saldo_info and 'availableAmount' in saldo_info:
+                saldo_disponivel = float(saldo_info.get('availableAmount', 0))
+                saldo_bloqueado = float(saldo_info.get('blockedAmount', 0))
+                saldo_conta = saldo_disponivel + saldo_bloqueado
+                
+                saldo_conta_fmt = f"{abs(saldo_conta):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                saldo_bloqueado_fmt = f"{abs(saldo_bloqueado):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                saldo_disponivel_fmt = f"{abs(saldo_disponivel):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                
+                if saldo_conta < 0:
+                    saldo_conta_fmt = f"-{saldo_conta_fmt}"
+                if saldo_bloqueado < 0:
+                    saldo_bloqueado_fmt = f"-{saldo_bloqueado_fmt}"
+                if saldo_disponivel < 0:
+                    saldo_disponivel_fmt = f"-{saldo_disponivel_fmt}"
+            else:
+                # Usar saldo calculado das transações
+                saldo_conta_fmt = saldo_fmt
+                saldo_bloqueado_fmt = "0,00"
+                saldo_disponivel_fmt = saldo_fmt
+            
             # Baseado na análise: formato exato do IBE
             saldo_data = [
                 ['', 'Saldo', 'Valor (R$)', ''],
                 ['', f'Posição em:{datetime.now().strftime("%d/%m/%Y")}', '', ''],
                 ['', '', '', ''],
                 ['', 'Saldo', 'Valor (R$)', ''],
-                ['', 'A - Saldo de Conta Corrente', saldo_fmt, ''],
-                ['', 'B - Saldo Bloqueado', '0,00', ''],
+                ['', 'A - Saldo de Conta Corrente', saldo_conta_fmt, ''],
+                ['', 'B - Saldo Bloqueado', saldo_bloqueado_fmt, ''],
                 ['', '    Desbloqueio em 1 dia', '0,00', ''],
                 ['', '    Desbloqueio em 2 dias', '0,00', ''],
                 ['', '    Desbloqueio em mais de 2 dias', '0,00', ''],
-                ['C - Saldo Disponível em Conta Corrente (A - B) ' + saldo_fmt, '', '', ''],
+                ['C - Saldo Disponível em Conta Corrente (A - B) ' + saldo_disponivel_fmt, '', '', ''],
             ]
             
             # Larguras aproximadas da tabela de saldo
