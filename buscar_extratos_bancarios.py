@@ -163,7 +163,7 @@ class SantanderExtratosBancarios:
                 url,
                 headers=headers,
                 params=params,
-                cert=(CERT_PATH, KEY_PATH),
+                cert=(self.cert_path, self.key_path),
                 timeout=30
             )
             
