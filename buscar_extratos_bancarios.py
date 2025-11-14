@@ -12,6 +12,7 @@ IMPORTANTE: Este script usa a API "Balance and Statement" do Santander que:
 
 import requests
 import json
+import base64
 from datetime import datetime, timedelta
 import pandas as pd
 import os
@@ -79,17 +80,21 @@ class SantanderExtratosBancarios:
         
         print(f"\n🔑 Obtendo token OAuth2 para fundo {self.fundo_id}...")
         
-        url = "https://trust-open.api.santander.com.br/auth/oauth/v2/token"
+        # URL correta para autenticação
+        url = "https://api-auth.santander.com.br/auth/oauth/v2/token"
+        
+        # Autenticação usando Basic Auth (padrão OAuth2)
+        auth_string = f"{self.client_id}:{self.client_secret}"
+        auth_b64 = base64.b64encode(auth_string.encode()).decode()
         
         headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Application-Key": self.client_id
+            "Authorization": f"Basic {auth_b64}",
+            "Content-Type": "application/x-www-form-urlencoded"
         }
         
         data = {
             "grant_type": "client_credentials",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret
+            "scope": "open_banking_balances_statement"
         }
         
         try:
@@ -110,11 +115,13 @@ class SantanderExtratosBancarios:
                 return self.token
             else:
                 print(f"❌ Erro ao obter token: {response.status_code}")
-                print(f"   Resposta: {response.text}")
+                print(f"   Resposta: \n    {json.dumps(response.json(), indent=6)}")
                 return None
                 
         except Exception as e:
             print(f"❌ Exceção ao obter token: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def listar_contas(self):
