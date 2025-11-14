@@ -455,7 +455,7 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         st.markdown("---")
         
         # Criar arquivo ZIP em memória com estrutura de pastas
-        from zipfile import ZipFile, ZIP_DEFLATED
+        from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
         from io import BytesIO
         import re
         
@@ -518,11 +518,15 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         for fundo in sorted(arquivos_por_fundo.keys()):
             print(f"   - {fundo}: {len(arquivos_por_fundo[fundo])} arquivo(s)")
         
+        # Criar ZIP com configuração mais compatível
         zip_buffer = BytesIO()
         arquivos_adicionados = 0
+        arquivos_com_erro = []
         
         try:
-            with ZipFile(zip_buffer, 'w', ZIP_DEFLATED, allowZip64=True) as zip_file:
+            # Usar compressão STORED (sem compressão) para evitar problemas
+            # ZIP_DEFLATED pode causar problemas em alguns casos
+            with ZipFile(zip_buffer, 'w', ZIP_STORED, allowZip64=True) as zip_file:
                 for fundo, arquivos in arquivos_por_fundo.items():
                     # Criar nome de pasta seguro (sem caracteres especiais)
                     # Remover TODOS caracteres problemáticos
@@ -590,6 +594,9 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             
             print(f"\n✅ {arquivos_adicionados} arquivo(s) adicionados ao ZIP")
             
+            # CRÍTICO: Fechar o ZIP explicitamente antes de ler
+            # O context manager já faz isso, mas vamos garantir
+            
         except Exception as e:
             print(f"\n❌ ERRO CRÍTICO ao criar ZIP: {e}")
             import traceback
@@ -597,20 +604,26 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             st.error(f"Erro ao criar ZIP: {e}")
             zip_buffer = None
         
-        if zip_buffer and arquivos_adicionados > 0:
-            zip_buffer.seek(0)
+        # Aguardar um pouco para garantir que o ZIP foi completamente escrito
+        import time
+        time.sleep(0.2)
         
-            # Verificar tamanho do ZIP
+        if zip_buffer and arquivos_adicionados > 0:
+            # CRÍTICO: Não fazer seek antes de obter o valor completo
+            # Vamos criar uma cópia do buffer para garantir integridade
             try:
-                zip_size = len(zip_buffer.getvalue())
-                print(f"\n📦 ZIP criado com sucesso: {zip_size} bytes ({zip_size/1024:.1f} KB)")
+                zip_bytes = zip_buffer.getvalue()
+                print(f"\n📦 ZIP finalizado: {len(zip_bytes)} bytes ({len(zip_bytes)/1024:.1f} KB)")
+                
+                # Recriar buffer com os bytes completos
+                zip_buffer = BytesIO(zip_bytes)
+                zip_size = len(zip_bytes)
             except Exception as e:
-                print(f"❌ Erro ao obter tamanho do ZIP: {e}")
-                st.error(f"Erro ao verificar ZIP: {e}")
+                print(f"❌ Erro ao finalizar ZIP: {e}")
+                st.error(f"Erro ao finalizar ZIP: {e}")
                 zip_buffer = None
         
         if zip_buffer:
-            
             # Testar integridade do ZIP
             zip_valido = False
             try:
