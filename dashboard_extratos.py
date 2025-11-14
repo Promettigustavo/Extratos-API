@@ -523,79 +523,70 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         arquivos_adicionados = 0
         arquivos_com_erro = []
         
+        print(f"\n📦 Iniciando criação do ZIP...")
+        
         try:
-            # Usar compressão STORED (sem compressão) para evitar problemas
-            # ZIP_DEFLATED pode causar problemas em alguns casos
-            with ZipFile(zip_buffer, 'w', ZIP_STORED, allowZip64=True) as zip_file:
+            # Usar ZIP_DEFLATED com nível de compressão baixo para melhor compatibilidade
+            with ZipFile(zip_buffer, 'w', ZIP_DEFLATED, allowZip64=True, compresslevel=1) as zip_file:
                 for fundo, arquivos in arquivos_por_fundo.items():
                     # Criar nome de pasta seguro (sem caracteres especiais)
-                    # Remover TODOS caracteres problemáticos
                     fundo_safe = fundo.strip()
                     fundo_safe = re.sub(r'[^\w\s-]', '', fundo_safe)  # Remove caracteres especiais
                     fundo_safe = re.sub(r'\s+', '_', fundo_safe)  # Espaços -> underscore
                     fundo_safe = re.sub(r'_+', '_', fundo_safe)  # Múltiplos underscores -> um
                     fundo_safe = fundo_safe.strip('_')  # Remove underscores das pontas
                     
-                    # Limitar tamanho do nome (max 100 chars)
-                    if len(fundo_safe) > 100:
-                        fundo_safe = fundo_safe[:100]
+                    # Limitar tamanho (max 80 chars para deixar espaço pro resto do caminho)
+                    if len(fundo_safe) > 80:
+                        fundo_safe = fundo_safe[:80].rstrip('_')
                     
                     print(f"\n📂 Processando fundo: {fundo_safe}")
                     
-                    # Período para nome da subpasta
+                    # Período para subpasta
                     periodo_str = f"{data_inicial.strftime('%d-%m-%Y')}_a_{data_final.strftime('%d-%m-%Y')}"
                     
                     for arquivo in arquivos:
-                        # Verificar se arquivo existe antes de adicionar
                         if not os.path.exists(arquivo):
                             print(f"   ⚠️ Arquivo não encontrado: {arquivo}")
+                            arquivos_com_erro.append(arquivo)
                             continue
                         
-                        # Estrutura simplificada: Periodo/arquivo.ext (SEM pasta de fundo)
-                        # Isso evita problemas de caminho muito longo
                         nome_arquivo = os.path.basename(arquivo)
                         
-                        # Garantir que caminho use apenas ASCII/UTF-8 válido
-                        try:
-                            # SIMPLIFICADO: Apenas período/arquivo (sem pasta de fundo)
-                            caminho_zip = f"{periodo_str}/{nome_arquivo}"
-                            # Testar se o caminho é válido
-                            caminho_zip.encode('utf-8')
-                            if len(caminho_zip) > 200:
-                                print(f"   ⚠️ Caminho muito longo ({len(caminho_zip)} chars), pulando")
-                                continue
-                                
-                        except UnicodeEncodeError:
-                            print(f"   ⚠️ Nome inválido (encoding), pulando: {nome_arquivo}")
-                            continue
+                        # Estrutura: FUNDO/DATA/arquivo.ext
+                        caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_arquivo}"
                         
                         try:
+                            # Validar encoding
+                            caminho_zip.encode('cp437')  # Encoding padrão do ZIP
+                            
+                            # Adicionar ao ZIP
                             zip_file.write(arquivo, caminho_zip)
                             arquivos_adicionados += 1
-                            if arquivos_adicionados <= 10:  # Mostrar apenas os primeiros 10
-                                print(f"   ✅ {nome_arquivo}")
-                        except Exception as e:
-                            # Fallback: tentar adicionar arquivo direto na raiz sem pastas
-                            print(f"   ⚠️ Erro com pastas, tentando na raiz: {e}")
-                            try:
-                                # Nome simples com prefixo do fundo
-                                nome_simples = f"{fundo_safe[:30]}_{nome_arquivo}"
-                                if len(nome_simples) > 100:
-                                    extensao = nome_arquivo[-5:] if '.' in nome_arquivo[-5:] else ''
-                                    nome_simples = nome_simples[:95] + extensao
+                            
+                            if arquivos_adicionados <= 10:
+                                print(f"   ✅ {nome_arquivo[:60]}")
+                            elif arquivos_adicionados == 11:
+                                print(f"   ... (mostrando apenas primeiros 10 por fundo)")
                                 
-                                zip_file.write(arquivo, nome_simples)
+                        except UnicodeEncodeError:
+                            # Se falhar no cp437, tentar com nome simplificado
+                            print(f"   ⚠️ Encoding inválido, simplificando: {nome_arquivo[:40]}...")
+                            nome_simples = re.sub(r'[^\w\s.-]', '', nome_arquivo)
+                            caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_simples}"
+                            try:
+                                zip_file.write(arquivo, caminho_zip)
                                 arquivos_adicionados += 1
-                                print(f"   ✅ Adicionado na raiz: {nome_simples[:50]}...")
-                            except Exception as e2:
-                                print(f"   ❌ ERRO CRÍTICO ao adicionar {nome_arquivo}: {e2}")
-                                import traceback
-                                traceback.print_exc()
+                            except Exception as e:
+                                print(f"   ❌ ERRO: {e}")
+                                arquivos_com_erro.append(arquivo)
+                        except Exception as e:
+                            print(f"   ❌ ERRO ao adicionar: {e}")
+                            arquivos_com_erro.append(arquivo)
             
             print(f"\n✅ {arquivos_adicionados} arquivo(s) adicionados ao ZIP")
-            
-            # CRÍTICO: Fechar o ZIP explicitamente antes de ler
-            # O context manager já faz isso, mas vamos garantir
+            if arquivos_com_erro:
+                print(f"⚠️  {len(arquivos_com_erro)} arquivo(s) com erro")
             
         except Exception as e:
             print(f"\n❌ ERRO CRÍTICO ao criar ZIP: {e}")
