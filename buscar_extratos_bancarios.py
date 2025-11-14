@@ -657,8 +657,15 @@ class SantanderExtratosBancarios:
             saldo = 0
             saldo_fmt = "0,00"  # Inicializar com valor padrão para evitar erro quando não há transações
             
+            # Se há informações de saldo da API, usar como saldo inicial
+            if saldo_info and 'availableAmount' in saldo_info:
+                saldo = float(saldo_info.get('availableAmount', 0))
+                saldo_fmt = f"{abs(saldo):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                if saldo < 0:
+                    saldo_fmt = f"-{saldo_fmt}"
+            
             # Saldo anterior
-            if transacoes:
+            if transacoes and len(transacoes) > 0:
                 primeira_data = transacoes[0].get('transactionDate', '')
                 if primeira_data and len(primeira_data) >= 10:
                     try:
@@ -667,7 +674,11 @@ class SantanderExtratosBancarios:
                     except:
                         pass
                 # 6 colunas com coluna vazia
-                table_data.append([primeira_data, '', 'SALDO ANTERIOR', '', '', '0,00'])
+                table_data.append([primeira_data, '', 'SALDO ANTERIOR', '', '', saldo_fmt])
+            else:
+                # Se não há transações, mostrar saldo atual na data de hoje
+                data_hoje = datetime.now().strftime('%d/%m/%Y')
+                table_data.append([data_hoje, '', 'SALDO ATUAL', '', '', saldo_fmt])
             
             # Transações
             for trans in transacoes:
