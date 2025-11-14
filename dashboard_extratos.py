@@ -550,11 +550,28 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                         # Estrutura: Fundo/Periodo/arquivo.ext
                         nome_arquivo = os.path.basename(arquivo)
                         
+                        # CRÍTICO: Simplificar nome do arquivo para evitar problemas
+                        # Alguns sistemas têm limite de 260 caracteres no caminho total
+                        # Nome do fundo já pode ter 100 chars, período 23 chars = 123 chars base
+                        # Deixar no máximo 130 chars para o nome do arquivo
+                        if len(nome_arquivo) > 130:
+                            # Preservar extensão
+                            extensao = nome_arquivo[-5:] if '.' in nome_arquivo[-5:] else ''
+                            nome_base = nome_arquivo[:-5] if extensao else nome_arquivo
+                            nome_arquivo = nome_base[:125] + extensao
+                            print(f"   ⚠️ Nome truncado: {nome_arquivo[:50]}...")
+                        
                         # Garantir que caminho use apenas ASCII/UTF-8 válido
                         try:
                             caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_arquivo}"
                             # Testar se o caminho é válido
                             caminho_zip.encode('utf-8')
+                            
+                            # Verificar comprimento total do caminho (limite conservador de 200 chars)
+                            if len(caminho_zip) > 200:
+                                print(f"   ⚠️ Caminho muito longo ({len(caminho_zip)} chars), pulando")
+                                continue
+                                
                         except UnicodeEncodeError:
                             print(f"   ⚠️ Nome inválido (encoding), pulando: {nome_arquivo}")
                             continue
@@ -565,9 +582,22 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                             if arquivos_adicionados <= 10:  # Mostrar apenas os primeiros 10
                                 print(f"   ✅ {nome_arquivo}")
                         except Exception as e:
-                            print(f"   ❌ ERRO ao adicionar {nome_arquivo}: {e}")
-                            import traceback
-                            traceback.print_exc()
+                            # Fallback: tentar adicionar arquivo direto na raiz sem pastas
+                            print(f"   ⚠️ Erro com pastas, tentando na raiz: {e}")
+                            try:
+                                # Nome simples com prefixo do fundo
+                                nome_simples = f"{fundo_safe[:30]}_{nome_arquivo}"
+                                if len(nome_simples) > 100:
+                                    extensao = nome_arquivo[-5:] if '.' in nome_arquivo[-5:] else ''
+                                    nome_simples = nome_simples[:95] + extensao
+                                
+                                zip_file.write(arquivo, nome_simples)
+                                arquivos_adicionados += 1
+                                print(f"   ✅ Adicionado na raiz: {nome_simples[:50]}...")
+                            except Exception as e2:
+                                print(f"   ❌ ERRO CRÍTICO ao adicionar {nome_arquivo}: {e2}")
+                                import traceback
+                                traceback.print_exc()
             
             print(f"\n✅ {arquivos_adicionados} arquivo(s) adicionados ao ZIP")
             
