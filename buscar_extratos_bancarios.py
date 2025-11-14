@@ -24,14 +24,20 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 
-# Tentar importar credenciais locais
+# Tentar importar credenciais - suporta Streamlit Cloud e local
 try:
-    from credenciais_bancos import SANTANDER_FUNDOS
-    HAS_CREDENCIAIS = True
+    # Primeiro tenta config_credentials (suporta Streamlit Secrets)
+    try:
+        from config_credentials import SANTANDER_FUNDOS
+        HAS_CREDENCIAIS = True
+    except ImportError:
+        # Fallback para credenciais locais
+        from credenciais_bancos import SANTANDER_FUNDOS
+        HAS_CREDENCIAIS = True
 except ImportError:
     HAS_CREDENCIAIS = False
     SANTANDER_FUNDOS = {}
-    print("⚠️  Credenciais locais não disponíveis")
+    print("⚠️  Credenciais não disponíveis")
 
 # Configurações para extrato
 CERT_PATH = r"C:\Users\GustavoPrometti\Cert\santander_cert.pem"
