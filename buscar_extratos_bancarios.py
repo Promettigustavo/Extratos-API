@@ -394,6 +394,9 @@ class SantanderExtratosBancarios:
             primeira_data = transacoes[0].get('transactionDate', '')
             dados.append([primeira_data, None, 'SALDO ANTERIOR', None, None, saldo])
         
+        # Debug: mostrar se há transações
+        print(f"📝 Processando {len(transacoes)} transações para Excel...")
+        
         # Adicionar transações
         for trans in transacoes:
             data = trans.get('transactionDate', '')
@@ -509,10 +512,14 @@ class SantanderExtratosBancarios:
         if not pasta_saida:
             pasta_saida = os.getcwd()
         
-        # Nome do arquivo com nome do fundo: comprovante-ibe-{FUNDO}-{UUID}.pdf
-        file_uuid = str(uuid.uuid4()).upper()
-        filename = f"comprovante-ibe-{self.fundo_nome}-{branch_code}-{account_number}-{file_uuid}.pdf"
+        # Nome do arquivo com nome do fundo: comprovante-ibe-{FUNDO}-{AGENCIA}-{CONTA}.pdf
+        # REMOVER UUID para evitar duplicação - usar apenas fundo-agencia-conta
+        filename = f"comprovante-ibe-{self.fundo_nome}-{branch_code}-{account_number}.pdf"
         filepath = os.path.join(pasta_saida, filename)
+        
+        # Verificar se arquivo já existe para evitar duplicação
+        if os.path.exists(filepath):
+            print(f"⚠️  PDF já existe, sobrescrevendo: {filename}")
         
         try:
             # Criar documento PDF com margens exatas do IBE (29pts = 10.23mm)
@@ -956,6 +963,7 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                 
                 # Buscar saldo
                 saldo = cliente.buscar_saldo(branch_code, account_number)
+                print(f"💰 Saldo obtido: {saldo}")
                 
                 # Buscar transações
                 transacoes = cliente.buscar_transacoes(
@@ -964,6 +972,10 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                     data_inicial=data_inicial,
                     data_final=data_final
                 )
+                
+                print(f"📊 Transações recebidas da API: {len(transacoes) if transacoes else 0}")
+                if transacoes and len(transacoes) > 0:
+                    print(f"   Primeira transação: {transacoes[0]}")
                 
                 # Atualizar flag se houver transações
                 if transacoes and len(transacoes) > 0:
