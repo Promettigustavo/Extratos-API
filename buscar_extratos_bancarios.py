@@ -918,6 +918,29 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
     print("BUSCA DE EXTRATOS BANCÁRIOS SANTANDER")
     print("="*80)
     
+    # 🧹 LIMPEZA DE CACHE: Remover tokens antigos
+    print("\n🧹 Limpando cache de tokens...")
+    import glob
+    tokens_removidos = 0
+    try:
+        # Buscar arquivos de token no diretório config
+        config_dir = os.path.join(os.path.dirname(__file__), 'config')
+        if os.path.exists(config_dir):
+            token_files = glob.glob(os.path.join(config_dir, 'santander_token_*.json'))
+            for token_file in token_files:
+                try:
+                    os.remove(token_file)
+                    tokens_removidos += 1
+                except Exception as e:
+                    print(f"⚠️ Não foi possível remover {os.path.basename(token_file)}: {e}")
+    except Exception as e:
+        print(f"⚠️ Erro ao limpar cache: {e}")
+    
+    if tokens_removidos > 0:
+        print(f"✅ {tokens_removidos} token(s) de cache removido(s)")
+    else:
+        print("✅ Nenhum token de cache encontrado")
+    
     # Determinar quais fundos processar
     if not fundos:
         # Listar apenas fundos que têm credenciais configuradas

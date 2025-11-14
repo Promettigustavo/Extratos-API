@@ -283,6 +283,26 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
     # Marcar como processando para evitar cliques duplos
     st.session_state.processando = True
     
+    # 🧹 LIMPEZA: Remover arquivos antigos da pasta de saída
+    pasta_saida = os.getcwd()
+    print("🧹 Limpando arquivos temporários...")
+    
+    arquivos_antigos = []
+    for arquivo in os.listdir(pasta_saida):
+        # Limpar apenas arquivos gerados pelo sistema
+        if arquivo.startswith('exportar-Santander') or arquivo.startswith('comprovante-ibe'):
+            caminho_completo = os.path.join(pasta_saida, arquivo)
+            try:
+                os.remove(caminho_completo)
+                arquivos_antigos.append(arquivo)
+            except Exception as e:
+                print(f"⚠️ Não foi possível remover {arquivo}: {e}")
+    
+    if arquivos_antigos:
+        print(f"✅ {len(arquivos_antigos)} arquivo(s) antigo(s) removido(s)")
+    else:
+        print("✅ Nenhum arquivo antigo encontrado")
+    
     # Barra de progresso e status
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -291,7 +311,6 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
     from datetime import datetime as dt
     data_inicial_dt = dt.combine(data_inicial, dt.min.time())
     data_final_dt = dt.combine(data_final, dt.max.time())
-    pasta_saida = os.getcwd()
     
     status_text.text(f"🔄 Processando {len(fundos_selecionados)} fundo(s)...")
     progress_bar.progress(0.1)
