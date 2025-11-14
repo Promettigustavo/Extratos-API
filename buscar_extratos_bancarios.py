@@ -147,17 +147,20 @@ class SantanderExtratosBancarios:
             print(f"⚠️  Certificado existe: {cert_exists} ({self.cert_path})")
             print(f"⚠️  Chave existe: {key_exists} ({self.key_path})")
         
-        url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/banks/{BANK_ID}/accounts"
+        # Endpoint correto para listar contas
+        url = "https://trust-open.api.santander.com.br/bank_account_information/v1/accounts"
         
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-            "X-Application-Key": self.client_id
+            "X-Application-Key": self.client_id,
+            "X-CNPJ": self.cnpj  # Header obrigatório
         }
         
+        # Parâmetros corretos para o endpoint /accounts
         params = {
-            "_offset": "1",
-            "_limit": "50"
+            "page": "1",
+            "page-size": "50"
         }
         
         try:
@@ -171,11 +174,24 @@ class SantanderExtratosBancarios:
             
             if response.status_code == 200:
                 data = response.json()
-                contas = data.get("_content", [])
+                # O endpoint /accounts retorna as contas em data.accounts
+                contas = data.get("data", {}).get("accounts", [])
                 print(f"✅ {len(contas)} conta(s) encontrada(s)")
                 
+                # Debug: mostrar resposta completa se não encontrar contas
+                if len(contas) == 0:
+                    print(f"   🔍 DEBUG - Resposta da API: {json.dumps(data, indent=2)}")
+                
                 for conta in contas:
-                    print(f"   • Agência: {conta.get('branchCode')} - Conta: {conta.get('number')}")
+                    branch_code = conta.get('branchCode') or conta.get('agencyCode')
+                    account_number = conta.get('number') or conta.get('accountNumber')
+                    print(f"   • Agência: {branch_code} - Conta: {account_number}")
+                    
+                    # Garantir que temos os campos necessários
+                    if not conta.get('branchCode') and conta.get('agencyCode'):
+                        conta['branchCode'] = conta['agencyCode']
+                    if not conta.get('number') and conta.get('accountNumber'):
+                        conta['number'] = conta['accountNumber']
                 
                 return contas
             else:
@@ -991,19 +1007,36 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
             
             if not contas:
                 print(f"⚠️  Nenhuma conta encontrada para o fundo {fundo_id}")
+                print(f"   Isso pode indicar:")
+                print(f"   - Credenciais incorretas ou expiradas")
+                print(f"   - Fundo não possui contas no Santander")
+                print(f"   - Problema na API de listagem de contas")
                 fundos_com_erro.append(fundo_id)
                 continue
             
+            print(f"📊 Total de contas encontradas: {len(contas)}")
+            if len(contas) > 1:
+                print(f"   🔍 ATENÇÃO: Fundo com MÚLTIPLAS CONTAS detectado!")
+                for i, c in enumerate(contas, 1):
+                    branch = c.get('branchCode') or c.get('agencyCode')
+                    account = c.get('number') or c.get('accountNumber')
+                    print(f"      Conta {i}: {branch}.{account}")
+            
             # Flag para rastrear se o fundo teve alguma transação
             fundo_teve_transacoes = False
+            arquivos_gerados = 0
             
             # Processar cada conta
-            for conta in contas:
-                branch_code = conta.get('branchCode')
-                account_number = conta.get('number')
+            for i, conta in enumerate(contas, 1):
+                branch_code = conta.get('branchCode') or conta.get('agencyCode')
+                account_number = conta.get('number') or conta.get('accountNumber')
+                
+                if not branch_code or not account_number:
+                    print(f"❌ Conta {i}: Dados incompletos - Branch: {branch_code}, Account: {account_number}")
+                    continue
                 
                 print(f"\n{'-'*80}")
-                print(f"Conta: {branch_code}.{account_number}")
+                print(f"Processando Conta {i}/{len(contas)}: {branch_code}.{account_number}")
                 print(f"{'-'*80}")
                 
                 # Buscar saldo
@@ -1021,16 +1054,13 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                 print(f"📊 Transações recebidas da API: {len(transacoes) if transacoes else 0}")
                 if transacoes and len(transacoes) > 0:
                     print(f"   Primeira transação: {transacoes[0]}")
-                
-                # Atualizar flag se houver transações
-                if transacoes and len(transacoes) > 0:
                     fundo_teve_transacoes = True
                 
                 # SEMPRE exportar Excel, mesmo sem transações (mostra saldo)
                 # Se não houver transações, criar lista vazia para incluir apenas saldo
                 transacoes_para_export = transacoes if transacoes else []
                 
-                cliente.exportar_transacoes_excel(
+                arquivo_excel = cliente.exportar_transacoes_excel(
                     transacoes_para_export,
                     branch_code,
                     account_number,
@@ -1038,15 +1068,29 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                     saldo_info=saldo  # Passar info de saldo
                 )
                 
+                if arquivo_excel:
+                    arquivos_gerados += 1
+                    print(f"   ✅ Excel gerado: {os.path.basename(arquivo_excel)}")
+                
                 # Gerar PDF se solicitado (mesmo sem transações)
                 if gerar_pdf:
-                    cliente.gerar_pdf_extrato(
+                    arquivo_pdf = cliente.gerar_pdf_extrato(
                         transacoes_para_export,
                         branch_code,
                         account_number,
                         pasta_saida=pasta_saida,
                         saldo_info=saldo  # Passar info de saldo
                     )
+                    
+                    if arquivo_pdf:
+                        arquivos_gerados += 1
+                        print(f"   ✅ PDF gerado: {os.path.basename(arquivo_pdf)}")
+            
+            # Relatório final do fundo
+            print(f"\n📈 FUNDO {fundo_id} - PROCESSAMENTO CONCLUÍDO:")
+            print(f"   📊 Contas processadas: {len(contas)}")
+            print(f"   📄 Arquivos gerados: {arquivos_gerados}")
+            print(f"   💰 Teve transações: {'✅ SIM' if fundo_teve_transacoes else '❌ NÃO'}")
             
             # Adicionar fundo na lista apropriada
             if fundo_teve_transacoes:
