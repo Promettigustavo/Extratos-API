@@ -86,9 +86,12 @@ class SantanderExtratosBancarios:
             return self.token
         
         print(f"\n🔑 Obtendo token OAuth2 para fundo {self.fundo_id}...")
+        print(f"   Client ID: {self.client_id[:10]}...")
+        print(f"   CNPJ: {self.cnpj}")
         
         # URL que funciona (testado localmente e no Streamlit Cloud)
         url = "https://trust-open.api.santander.com.br/auth/oauth/v2/token"
+        print(f"   🔗 URL do token: {url}")
         
         # Autenticação usando Basic Auth (padrão OAuth2)
         auth_string = f"{self.client_id}:{self.client_secret}"
@@ -104,7 +107,10 @@ class SantanderExtratosBancarios:
             "scope": "account_information.accounts.read account_information.balances.read account_information.transactions.read"
         }
         
+        print(f"   📊 Escopo solicitado: {data['scope']}")
+        
         try:
+            print(f"   🚀 Enviando requisição de token...")
             response = requests.post(
                 url, 
                 headers=headers, 
@@ -118,11 +124,20 @@ class SantanderExtratosBancarios:
                 self.token = token_data.get("access_token")
                 expires_in = token_data.get("expires_in", 900)
                 self.token_expira = datetime.now() + timedelta(seconds=expires_in - 60)
+                
                 print(f"✅ Token obtido com sucesso (válido por {expires_in}s)")
+                print(f"   Token: {self.token[:20] if self.token else 'NONE'}...")
+                
+                # Verificar se token tem o escopo necessário
+                scope_recebido = token_data.get("scope", "")
+                print(f"   📋 Escopo recebido: {scope_recebido}")
+                if "account" not in scope_recebido.lower():
+                    print(f"   ⚠️ AVISO: Token pode não ter permissão para accounts!")
+                
                 return self.token
             else:
                 print(f"❌ Erro ao obter token: {response.status_code}")
-                print(f"   Resposta: \n    {json.dumps(response.json(), indent=6)}")
+                print(f"   Resposta: \n    {json.dumps(response.json(), indent=6) if response.content else 'Vazio'}")
                 return None
                 
         except Exception as e:
@@ -169,6 +184,7 @@ class SantanderExtratosBancarios:
         print(f"   📊 Params: {params}")
         
         try:
+            print(f"   🚀 Fazendo requisição para API...")
             response = requests.get(
                 url,
                 headers=headers,
@@ -176,6 +192,9 @@ class SantanderExtratosBancarios:
                 cert=(self.cert_path, self.key_path),
                 timeout=30
             )
+            
+            print(f"   📡 Resposta recebida - Status: {response.status_code}")
+            print(f"   📏 Tamanho da resposta: {len(response.text)} caracteres")
             
             if response.status_code == 200:
                 data = response.json()
@@ -250,6 +269,12 @@ class SantanderExtratosBancarios:
                 
         except Exception as e:
             print(f"❌ Exceção ao listar contas: {e}")
+            print(f"   URL tentada: {url}")
+            print(f"   Certificados: cert={self.cert_path}, key={self.key_path}")
+            print(f"   Client ID: {self.client_id[:10]}...")
+            print(f"   CNPJ: {self.cnpj}")
+            import traceback
+            traceback.print_exc()
             return []
     
     def buscar_transacoes(self, branch_code, account_number, data_inicial=None, data_final=None, limite=1000):
@@ -1048,17 +1073,23 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
         print(f"{'='*80}")
         
         try:
+            print(f"\n🔧 Criando cliente para fundo {fundo_id}...")
             # Criar cliente
             cliente = SantanderExtratosBancarios(fundo_id)
+            print(f"✅ Cliente criado com sucesso")
             
+            print(f"🏦 Iniciando listagem de contas...")
             # Listar contas
             contas = cliente.listar_contas()
+            print(f"📊 Resultado da listagem: {len(contas) if contas else 0} contas")
             
             if not contas:
                 print(f"⚠️  Nenhuma conta encontrada para o fundo {fundo_id}")
                 print(f"   Isso pode indicar:")
+                print(f"   - Token obtido mas sem permissão para listar contas")
+                print(f"   - Endpoint /accounts retornou estrutura vazia")
+                print(f"   - CNPJ {cliente.cnpj} não possui contas no Santander")
                 print(f"   - Credenciais incorretas ou expiradas")
-                print(f"   - Fundo não possui contas no Santander")
                 print(f"   - Problema na API de listagem de contas")
                 fundos_com_erro.append(fundo_id)
                 continue
