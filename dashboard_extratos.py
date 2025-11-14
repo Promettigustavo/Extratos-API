@@ -328,40 +328,46 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         # Buscar arquivos gerados nos últimos 15 minutos
         import glob
         
-        # Procurar arquivos Excel com vários padrões possíveis
-        padroes_excel = [
-            os.path.join(pasta_saida, "exportar-Santander*.xlsx"),
-            os.path.join(pasta_saida, "extrato_*.xlsx"),
-            os.path.join(pasta_saida, "*.xlsx")
-        ]
+        # Debug: listar todos os arquivos no diretório
+        todos_arquivos = os.listdir(pasta_saida)
+        arquivos_xlsx = [f for f in todos_arquivos if f.endswith('.xlsx')]
+        arquivos_pdf = [f for f in todos_arquivos if f.endswith('.pdf')]
         
-        for padrao in padroes_excel:
-            for arquivo in glob.glob(padrao):
-                if arquivo not in arquivos_gerados:  # Evitar duplicatas
-                    if datetime.fromtimestamp(os.path.getmtime(arquivo)) > timestamp_inicio:
-                        arquivos_gerados.append(arquivo)
+        print(f"\n🔍 DEBUG - Arquivos no diretório {pasta_saida}:")
+        print(f"   Excel encontrados: {len(arquivos_xlsx)}")
+        for f in arquivos_xlsx[:5]:  # Mostrar os 5 primeiros
+            print(f"      - {f}")
+        print(f"   PDF encontrados: {len(arquivos_pdf)}")
+        for f in arquivos_pdf[:5]:  # Mostrar os 5 primeiros
+            print(f"      - {f}")
         
-        # Procurar arquivos PDF se solicitado
+        # Procurar TODOS os arquivos Excel gerados (novo padrão com nome do fundo)
+        # Padrão: exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx
+        for arquivo in arquivos_xlsx:
+            arquivo_completo = os.path.join(pasta_saida, arquivo)
+            if arquivo_completo not in arquivos_gerados:  # Evitar duplicatas
+                if datetime.fromtimestamp(os.path.getmtime(arquivo_completo)) > timestamp_inicio:
+                    arquivos_gerados.append(arquivo_completo)
+                    print(f"   ✅ Adicionado: {arquivo}")
+        
+        # Procurar TODOS os arquivos PDF se solicitado
+        # Padrão: comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
         if gerar_pdf:
-            padrao_pdf = os.path.join(pasta_saida, "comprovante-ibe-*.pdf")
-            for arquivo in glob.glob(padrao_pdf):
-                # Excluir o arquivo de exemplo
-                if "(1).pdf" not in arquivo and arquivo not in arquivos_gerados:
-                    if datetime.fromtimestamp(os.path.getmtime(arquivo)) > timestamp_inicio:
-                        arquivos_gerados.append(arquivo)
+            for arquivo in arquivos_pdf:
+                arquivo_completo = os.path.join(pasta_saida, arquivo)
+                # Excluir exemplos ou arquivos antigos
+                if "(1).pdf" not in arquivo and arquivo_completo not in arquivos_gerados:
+                    if datetime.fromtimestamp(os.path.getmtime(arquivo_completo)) > timestamp_inicio:
+                        arquivos_gerados.append(arquivo_completo)
+                        print(f"   ✅ Adicionado: {arquivo}")
         
         progress_bar.progress(1.0)
         status_text.text("✅ Processamento concluído!")
         
-        # Verificar se não houve arquivos gerados
-        if not arquivos_gerados:
-            st.warning("⚠️ **Nenhuma transação encontrada no período selecionado!**")
-            st.info(f"""
-            💡 **Dicas:**
-            - Tente aumentar o período de busca (ex: últimos 30 dias)
-            - Verifique se o fundo **{fundos_selecionados[0] if len(fundos_selecionados) == 1 else 'selecionado'}** possui movimentações recentes
-            - Período atual: **{data_inicial.strftime('%d/%m/%Y')}** a **{data_final.strftime('%d/%m/%Y')}** ({(data_final - data_inicial).days} dias)
-            """)
+        # Debug: mostrar total de arquivos encontrados
+        print(f"\n📊 Total de arquivos detectados: {len(arquivos_gerados)}")
+        print(f"   - Excel: {len([f for f in arquivos_gerados if f.endswith('.xlsx')])}")
+        print(f"   - PDF: {len([f for f in arquivos_gerados if f.endswith('.pdf')])}")
             
     except Exception as e:
         progress_bar.progress(1.0)
@@ -393,6 +399,10 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         
         st.success(f"🎉 Total: {len(arquivos_gerados)} arquivo(s) gerado(s) com sucesso!")
         
+        # Informação sobre fundos sem transações
+        if len(fundos_selecionados) > 1:
+            st.info("ℹ️ **Nota:** Fundos sem transações no período também tiveram arquivos gerados mostrando apenas os saldos atuais. Confira o resumo nos logs acima.")
+        
         # Agrupar por tipo
         excels = [f for f in arquivos_gerados if f.endswith('.xlsx')]
         pdfs = [f for f in arquivos_gerados if f.endswith('.pdf')]
@@ -402,16 +412,30 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         with col1:
             if excels:
                 st.markdown("**📊 Arquivos Excel:**")
-                for arquivo in sorted(excels):
+                # Mostrar apenas os primeiros 10, depois resumo
+                for arquivo in sorted(excels)[:10]:
                     tamanho = os.path.getsize(arquivo) / 1024  # KB
-                    st.markdown(f"- `{os.path.basename(arquivo)}` ({tamanho:.1f} KB)")
+                    nome = os.path.basename(arquivo)
+                    # Encurtar nome se muito longo
+                    if len(nome) > 50:
+                        nome = nome[:47] + "..."
+                    st.markdown(f"- `{nome}` ({tamanho:.1f} KB)")
+                if len(excels) > 10:
+                    st.markdown(f"- ... e mais {len(excels) - 10} arquivo(s)")
         
         with col2:
             if pdfs:
                 st.markdown("**📑 Arquivos PDF:**")
-                for arquivo in sorted(pdfs):
+                # Mostrar apenas os primeiros 10, depois resumo
+                for arquivo in sorted(pdfs)[:10]:
                     tamanho = os.path.getsize(arquivo) / 1024  # KB
-                    st.markdown(f"- `{os.path.basename(arquivo)}` ({tamanho:.1f} KB)")
+                    nome = os.path.basename(arquivo)
+                    # Encurtar nome se muito longo
+                    if len(nome) > 50:
+                        nome = nome[:47] + "..."
+                    st.markdown(f"- `{nome}` ({tamanho:.1f} KB)")
+                if len(pdfs) > 10:
+                    st.markdown(f"- ... e mais {len(pdfs) - 10} arquivo(s)")
         
         st.info(f"📁 Diretório: `{os.path.dirname(arquivos_gerados[0])}`")
         
