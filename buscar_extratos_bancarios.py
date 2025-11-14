@@ -80,8 +80,8 @@ class SantanderExtratosBancarios:
         
         print(f"\n🔑 Obtendo token OAuth2 para fundo {self.fundo_id}...")
         
-        # URL correta para autenticação
-        url = "https://api-auth.santander.com.br/auth/oauth/v2/token"
+        # URL que funciona (testado localmente e no Streamlit Cloud)
+        url = "https://trust-open.api.santander.com.br/auth/oauth/v2/token"
         
         # Autenticação usando Basic Auth (padrão OAuth2)
         auth_string = f"{self.client_id}:{self.client_secret}"
