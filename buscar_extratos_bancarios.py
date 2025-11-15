@@ -79,6 +79,22 @@ class SantanderExtratosBancarios:
         print(f"   cert_path: {self.cert_path}")
         print(f"   key_path: {self.key_path}")
         
+        # Contas conhecidas como fallback para erro 401 em /accounts
+        self.contas_conhecidas = {
+            "CONDOLIVRE FUNDO DE INVESTIMENTO EM DIREITOS CREDITORIOS": [
+                {"branchCode": "2271", "number": "130137784"},
+                {"branchCode": "2271", "number": "130176356"}
+            ],
+            # Adicionar outras conforme necessário
+        }
+        
+    def obter_contas_conhecidas(self):
+        """
+        Retorna contas conhecidas para o fundo atual
+        Usado como fallback quando /accounts retorna 401
+        """
+        return self.contas_conhecidas.get(self.fundo_nome, [])
+        
     def obter_token_acesso(self):
         """Obtém token OAuth2 para autenticação"""
         # Verificar se token ainda é válido
@@ -255,6 +271,18 @@ class SantanderExtratosBancarios:
                 print(f"   Headers enviados: {json.dumps({k: v[:20] + '...' if len(v) > 20 else v for k, v in headers.items()}, indent=2)}")
                 print(f"   Parâmetros: {params}")
                 print(f"   Resposta completa: {response.text}")
+                
+                # ✅ FALLBACK: Se erro 401, usar contas conhecidas
+                if response.status_code == 401:
+                    print(f"   🔄 Tentando fallback para contas conhecidas...")
+                    contas_conhecidas = self.obter_contas_conhecidas()
+                    if contas_conhecidas:
+                        print(f"   ✅ Usando {len(contas_conhecidas)} conta(s) conhecida(s)")
+                        for conta in contas_conhecidas:
+                            print(f"   • Agência: {conta['branchCode']} - Conta: {conta['number']}")
+                        return contas_conhecidas
+                    else:
+                        print(f"   ❌ Nenhuma conta conhecida configurada para {self.fundo_nome}")
                 
                 # Tentar interpretar erro
                 try:
