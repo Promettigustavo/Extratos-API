@@ -266,7 +266,7 @@ col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
     preset_periodo = st.selectbox(
         "Período pré-definido:",
-        ["Últimos 7 dias", "Últimos 15 dias", "Últimos 30 dias", "Mês atual", "Mês anterior", "Personalizado"],
+        ["Últimos 7 dias", "Últimos 15 dias", "Últimos 30 dias", "Mês atual", "Mês anterior", "Último ano", "Últimos 2 anos", "Personalizado"],
         help="Escolha um período pré-definido ou selecione 'Personalizado' para definir datas específicas"
     )
 
@@ -289,6 +289,12 @@ elif preset_periodo == "Mês anterior":
     ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
     data_inicial_default = ultimo_dia_mes_anterior.replace(day=1)
     data_final_default = ultimo_dia_mes_anterior
+elif preset_periodo == "Último ano":
+    data_inicial_default = hoje - timedelta(days=365)
+    data_final_default = hoje
+elif preset_periodo == "Últimos 2 anos":
+    data_inicial_default = hoje - timedelta(days=730)
+    data_final_default = hoje
 else:  # Personalizado
     data_inicial_default = hoje - timedelta(days=7)
     data_final_default = hoje
