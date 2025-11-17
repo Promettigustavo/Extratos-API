@@ -2,14 +2,12 @@
 Dashboard Streamlit para Busca de Extratos Bancários
 Identidade Visual: Kanastra
 Bancos suportados: Santander (Itaú e Arbi em desenvolvimento)
-Acesso restrito: apenas e-mails @kanastra.com.br ou @liminedtvm.com
 """
 
 import streamlit as st
 from datetime import datetime, timedelta
 import os
 import sys
-import re
 
 # Adicionar diretório ao path para imports
 sys.path.insert(0, os.path.dirname(__file__))
@@ -20,124 +18,6 @@ st.set_page_config(
     page_icon="https://www.kanastra.design/symbol.svg",
     layout="wide"
 )
-
-"""
-Dashboard Streamlit para Busca de Extratos Bancários
-Identidade Visual: Kanastra
-Bancos suportados: Santander (Itaú e Arbi em desenvolvimento)
-Acesso restrito via Streamlit Authentication (configurar no Cloud)
-"""
-
-import streamlit as st
-from datetime import datetime, timedelta
-import os
-import sys
-import re
-
-# Adicionar diretório ao path para imports
-sys.path.insert(0, os.path.dirname(__file__))
-
-# Configuração da página
-st.set_page_config(
-    page_title="Extratos Bancários - Kanastra",
-    page_icon="https://www.kanastra.design/symbol.svg",
-    layout="wide"
-)
-
-# ========== AUTENTICAÇÃO VIA STREAMLIT CLOUD ==========
-# Instruções de configuração:
-# 1. No Streamlit Cloud, vá em Settings > Secrets
-# 2. Adicione:
-#    [auth]
-#    emails_permitidos = ["email1@kanastra.com.br", "email2@kanastra.com.br", "email3@liminedtvm.com"]
-# 3. Ou configure "Viewer authentication" em Settings > Sharing para restringir por e-mail do Google
-
-# Verificar se está usando autenticação do Streamlit Cloud
-def verificar_autenticacao_streamlit():
-    """
-    Verifica se o app está usando autenticação nativa do Streamlit Cloud.
-    Se sim, o e-mail do usuário estará disponível em st.experimental_user
-    """
-    try:
-        # Tentar obter e-mail do usuário autenticado pelo Streamlit Cloud
-        user_info = st.experimental_user
-        if user_info and hasattr(user_info, 'email'):
-            email = user_info.email.lower()
-            # Verificar se o e-mail é de domínio permitido
-            dominios_permitidos = ["@kanastra.com.br", "@liminedtvm.com"]
-            if any(email.endswith(dominio) for dominio in dominios_permitidos):
-                st.session_state.usuario_email = email
-                st.session_state.autenticado = True
-                return True
-            else:
-                st.error(f"❌ Acesso negado! O e-mail {email} não pertence aos domínios autorizados (@kanastra.com.br ou @liminedtvm.com)")
-                st.stop()
-        return False
-    except:
-        # Se não estiver no Streamlit Cloud ou sem autenticação, retorna False
-        return False
-
-# Verificar autenticação do Streamlit Cloud primeiro
-if verificar_autenticacao_streamlit():
-    # Usuário autenticado via Streamlit Cloud
-    pass
-else:
-    # Fallback: verificar se há lista de e-mails em secrets (para desenvolvimento local)
-    try:
-        emails_permitidos = st.secrets.get("auth", {}).get("emails_permitidos", [])
-        if emails_permitidos and isinstance(emails_permitidos, list):
-            # Modo de desenvolvimento com lista de e-mails
-            if "autenticado" not in st.session_state:
-                st.session_state.autenticado = False
-            
-            if not st.session_state.autenticado:
-                st.markdown('<div style="text-align: center;"><h1>🔐 Acesso Restrito</h1></div>', unsafe_allow_html=True)
-                st.markdown('<div style="text-align: center;"><h3>Extratos Bancários - Kanastra</h3></div>', unsafe_allow_html=True)
-                st.markdown("---")
-                
-                col1, col2, col3 = st.columns([1, 2, 1])
-                with col2:
-                    st.warning("⚠️ **Modo de desenvolvimento ativo**\n\nEm produção, use a autenticação nativa do Streamlit Cloud.")
-                    st.info(f"📋 **E-mails autorizados:** {len(emails_permitidos)} cadastrado(s)")
-                    
-                    with st.form("login_dev"):
-                        email = st.selectbox("📧 Selecione seu e-mail:", [""] + emails_permitidos)
-                        if st.form_submit_button("🔓 Acessar (DEV)", use_container_width=True):
-                            if email:
-                                st.session_state.autenticado = True
-                                st.session_state.usuario_email = email
-                                st.rerun()
-                            else:
-                                st.error("Selecione um e-mail válido")
-                    
-                    st.caption("🛡️ Sistema protegido | Kanastra © 2025")
-                st.stop()
-        else:
-            # Sem autenticação configurada - mostrar aviso
-            st.error("""
-            ⚠️ **ATENÇÃO: Autenticação não configurada!**
-            
-            Para proteger este aplicativo:
-            
-            **Opção 1 (Recomendado): Autenticação Nativa do Streamlit Cloud**
-            1. Vá em **Settings > Sharing** no Streamlit Cloud
-            2. Ative **"Viewer authentication"**
-            3. Adicione os e-mails autorizados (@kanastra.com.br ou @liminedtvm.com)
-            
-            **Opção 2: Secrets (Desenvolvimento)**
-            1. Vá em **Settings > Secrets**
-            2. Adicione:
-            ```
-            [auth]
-            emails_permitidos = ["email1@kanastra.com.br", "email2@liminedtvm.com"]
-            ```
-            """)
-            st.stop()
-    except:
-        # Erro ao acessar secrets
-        st.error("❌ Erro ao verificar configuração de autenticação. Configure secrets ou autenticação do Streamlit Cloud.")
-        st.stop()
-
 
 # CSS customizado - Kanastra Brand
 st.markdown("""
@@ -302,23 +182,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header com logo Kanastra
-col_logo, col_title, col_logout = st.columns([1, 5, 1])
+col_logo, col_title = st.columns([1, 6])
 with col_logo:
     st.image("https://www.kanastra.design/symbol-green.svg", width=100)
 with col_title:
     st.markdown('<div class="main-header">Extratos Bancários</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Geração automatizada de extratos em formato Excel e PDF</div>', unsafe_allow_html=True)
-with col_logout:
-    # Mostrar informações do usuário se disponível
-    if "usuario_email" in st.session_state and st.session_state.usuario_email:
-        st.write("")  # Espaço
-        st.caption(f"👤 {st.session_state.usuario_email.split('@')[0]}")
-        # Botão de logout apenas se estiver em modo dev (com session_state)
-        if "autenticado" in st.session_state:
-            if st.button("🚪 Sair", use_container_width=True):
-                st.session_state.autenticado = False
-                st.session_state.usuario_email = None
-                st.rerun()
 
 # ========== SIDEBAR: SELEÇÃO DE BANCO ==========
 with st.sidebar:
