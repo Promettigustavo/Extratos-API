@@ -506,6 +506,14 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         
         # Agrupar arquivos por fundo
         arquivos_por_fundo = {}
+        
+        # Criar mapeamento: nome_longo -> fundo_id (para nomes curtos nas pastas)
+        nome_para_id = {}
+        for fundo_id in fundos_selecionados:
+            if fundo_id in SANTANDER_FUNDOS:
+                nome_longo = SANTANDER_FUNDOS[fundo_id].get('nome', fundo_id)
+                nome_para_id[nome_longo] = fundo_id
+        
         for arquivo in arquivos_gerados:
             # Identificar fundo pelo nome do arquivo
             nome = os.path.basename(arquivo)
@@ -514,7 +522,7 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             fundo_nome = "Sem_Fundo"  # Default
             
             # Padrão Excel: exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx
-            # Padrão PDF: comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
+            # Padrão PDF: comprovante-ibe-FUNDO-AGENCIA-CONTA.pdf
             
             if nome.startswith('exportar-Santander'):
                 # Excel: formato "exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx"
@@ -537,9 +545,12 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             if fundo_nome == "Sem_Fundo" and len(fundos_selecionados) == 1:
                 fundo_nome = fundos_selecionados[0]
             
-            if fundo_nome not in arquivos_por_fundo:
-                arquivos_por_fundo[fundo_nome] = []
-            arquivos_por_fundo[fundo_nome].append(arquivo)
+            # Converter nome longo para ID curto
+            fundo_id_curto = nome_para_id.get(fundo_nome, fundo_nome)
+            
+            if fundo_id_curto not in arquivos_por_fundo:
+                arquivos_por_fundo[fundo_id_curto] = []
+            arquivos_por_fundo[fundo_id_curto].append(arquivo)
         
         print(f"\n📁 Fundos identificados: {len(arquivos_por_fundo)}")
         for fundo in sorted(arquivos_por_fundo.keys()):
@@ -559,15 +570,12 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                 contador = 0
                 
                 # Agrupar arquivos por fundo E conta
-                for fundo, arquivos in arquivos_por_fundo.items():
-                    # Nome de pasta seguro para o fundo
-                    fundo_safe = fundo.strip()
-                    fundo_safe = re.sub(r'[^\w\s-]', '', fundo_safe)
-                    fundo_safe = re.sub(r'\s+', '_', fundo_safe)
-                    fundo_safe = fundo_safe.strip('_')
+                for fundo_id, arquivos in arquivos_por_fundo.items():
+                    # Usar o ID do fundo diretamente (já é curto: CONDOLIVRE FIDC, SEJA FIDC, 911 BANK, etc)
+                    fundo_safe = fundo_id.replace(' ', '_')
                     
-                    # Período para subpasta
-                    periodo_str = f"{data_inicial.strftime('%d-%m-%Y')}_a_{data_final.strftime('%d-%m-%Y')}"
+                    # Período para subpasta - formato curto (DDMMAAAA_DDMMAAAA)
+                    periodo_str = f"{data_inicial.strftime('%d%m%Y')}_{data_final.strftime('%d%m%Y')}"
                     
                     print(f"\n📂 Processando fundo: {fundo_safe}")
                     
