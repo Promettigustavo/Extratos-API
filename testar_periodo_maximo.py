@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from buscar_extratos_bancarios import SantanderExtratosBancarios
 
 # Configuração do teste
-FUNDO_TESTE = "CONDOLIVRE FIDC"  # Alterar para um fundo que você tenha acesso
+FUNDO_TESTE = "MAKENA"  # Alterar para um fundo que você tenha acesso
 PERIODOS_TESTE = [
     ("30 dias", 30),
     ("60 dias", 60),
