@@ -120,7 +120,7 @@ class SantanderExtratosBancarios:
         
         data = {
             "grant_type": "client_credentials",
-            "scope": "account_information.accounts.read account_information.balances.read account_information.transactions.read"
+            "scope": "open_banking_balances_statement"
         }
         
         print(f"   📊 Escopo solicitado: {data['scope']}")
