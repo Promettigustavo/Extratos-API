@@ -545,8 +545,8 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         for fundo in sorted(arquivos_por_fundo.keys()):
             print(f"   - {fundo}: {len(arquivos_por_fundo[fundo])} arquivo(s)")
         
-        # Criar ZIP SIMPLES - TODOS os arquivos na RAIZ, sem pastas
-        print(f"\n📦 Criando ZIP simples (sem pastas)...")
+        # Criar ZIP com estrutura organizada: FUNDO/DATA/extrato.xlsx e extrato.pdf
+        print(f"\n📦 Criando ZIP organizado por fundo/data/conta...")
         
         from zipfile import ZipFile, ZIP_STORED
         from io import BytesIO
@@ -557,9 +557,11 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             # ZIP_STORED = sem compressão (mais confiável)
             with ZipFile(zip_buffer, 'w', ZIP_STORED) as zip_file:
                 contador = 0
+                
+                # Agrupar arquivos por fundo E conta
                 for fundo, arquivos in arquivos_por_fundo.items():
-                    # Nome de pasta seguro para o fundo (curto)
-                    fundo_safe = fundo.strip()[:30]  # Limitar a 30 caracteres
+                    # Nome de pasta seguro para o fundo
+                    fundo_safe = fundo.strip()
                     fundo_safe = re.sub(r'[^\w\s-]', '', fundo_safe)
                     fundo_safe = re.sub(r'\s+', '_', fundo_safe)
                     fundo_safe = fundo_safe.strip('_')
@@ -569,44 +571,65 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                     
                     print(f"\n📂 Processando fundo: {fundo_safe}")
                     
+                    # Agrupar arquivos por conta dentro do fundo
+                    arquivos_por_conta = {}
+                    
                     for arquivo in arquivos:
                         if os.path.exists(arquivo):
                             nome_original = os.path.basename(arquivo)
-                            extensao = os.path.splitext(nome_original)[1]
                             
-                            # Encurtar nome do arquivo
-                            if 'exportar-Santander' in nome_original or 'Extrato' in nome_original:
-                                partes = nome_original.replace('exportar-Santander - Extrato ', '').replace(extensao, '').split('-')
-                                if len(partes) >= 2:
-                                    agencia = partes[-2]
-                                    conta = partes[-1]
-                                    nome_curto = f"Extrato_{agencia}_{conta}{extensao}"
-                                else:
-                                    nome_curto = f"Extrato{extensao}"
+                            # Extrair agência e conta do nome do arquivo
+                            agencia = None
+                            conta = None
                             
+                            if 'exportar-Santander' in nome_original:
+                                # Formato: exportar-Santander - Extrato ... -FUNDO-AGENCIA-CONTA.xlsx
+                                match = re.search(r'-(\d{4})-(\d+)\.xlsx$', nome_original)
+                                if match:
+                                    agencia = match.group(1)
+                                    conta = match.group(2)
                             elif 'comprovante-ibe' in nome_original:
-                                partes = nome_original.replace('comprovante-ibe-', '').replace(extensao, '').split('-')
-                                if len(partes) >= 3:
-                                    agencia = partes[1]
-                                    conta = partes[2]
-                                    nome_curto = f"Comprov_{agencia}_{conta}{extensao}"
-                                else:
-                                    nome_curto = f"Comprovante{extensao}"
-                            else:
-                                nome_curto = f"Arquivo{extensao}"
+                                # Formato: comprovante-ibe-FUNDO-AGENCIA-CONTA.pdf (pode ter UUID ou não)
+                                match = re.search(r'-(\d{4})-(\d+)', nome_original)
+                                if match:
+                                    agencia = match.group(1)
+                                    conta = match.group(2)
                             
-                            # Estrutura: FUNDO/PERIODO/arquivo.ext
-                            caminho_zip = f"{fundo_safe}/{periodo_str}/{nome_curto}"
-                            
-                            zip_file.write(arquivo, caminho_zip)
+                            if agencia and conta:
+                                conta_key = f"{agencia}_{conta}"
+                                if conta_key not in arquivos_por_conta:
+                                    arquivos_por_conta[conta_key] = {'excel': None, 'pdf': None}
+                                
+                                if arquivo.endswith('.xlsx'):
+                                    arquivos_por_conta[conta_key]['excel'] = arquivo
+                                elif arquivo.endswith('.pdf'):
+                                    arquivos_por_conta[conta_key]['pdf'] = arquivo
+                    
+                    # Adicionar arquivos ao ZIP organizados por conta
+                    for conta_key, arquivos_conta in arquivos_por_conta.items():
+                        # Se há apenas uma conta, não criar subpasta de conta
+                        if len(arquivos_por_conta) == 1:
+                            # Estrutura: FUNDO/DATA/extrato.xlsx
+                            pasta_destino = f"{fundo_safe}/{periodo_str}"
+                        else:
+                            # Estrutura: FUNDO/DATA/CONTA/extrato.xlsx
+                            pasta_destino = f"{fundo_safe}/{periodo_str}/{conta_key}"
+                        
+                        # Adicionar Excel
+                        if arquivos_conta['excel']:
+                            caminho_zip = f"{pasta_destino}/extrato.xlsx"
+                            zip_file.write(arquivos_conta['excel'], caminho_zip)
                             contador += 1
-                            
-                            if contador <= 15:
-                                print(f"   ✅ {caminho_zip}")
-                            elif contador == 16:
-                                print(f"   ... (mostrando apenas primeiros 15)")
+                            print(f"   ✅ {caminho_zip}")
+                        
+                        # Adicionar PDF
+                        if arquivos_conta['pdf']:
+                            caminho_zip = f"{pasta_destino}/extrato.pdf"
+                            zip_file.write(arquivos_conta['pdf'], caminho_zip)
+                            contador += 1
+                            print(f"   ✅ {caminho_zip}")
             
-            print(f"\n✅ ZIP criado com {contador} arquivo(s) em {len(arquivos_por_fundo)} pasta(s)")
+            print(f"\n✅ ZIP criado com {contador} arquivo(s) em {len(arquivos_por_fundo)} fundo(s)")
             
             # Obter bytes do ZIP
             zip_bytes = zip_buffer.getvalue()
@@ -630,7 +653,13 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                     use_container_width=True
                 )
                 st.caption(f"💾 {len(arquivos_gerados)} arquivo(s) • {zip_size/1024/1024:.2f} MB")
-                st.info("💡 **Nota:** Arquivos estão todos na raiz do ZIP (sem pastas). Organize manualmente após extrair.")
+                st.success(f"""
+                📂 **Estrutura do ZIP:**
+                - `NOME_DO_FUNDO/DD-MM-AAAA_a_DD-MM-AAAA/extrato.xlsx`
+                - `NOME_DO_FUNDO/DD-MM-AAAA_a_DD-MM-AAAA/extrato.pdf`
+                
+                {f"- Se houver múltiplas contas: `NOME_DO_FUNDO/DATA/AGENCIA_CONTA/extrato.*`" if len(fundos_selecionados) > 1 else ""}
+                """)
             
         except Exception as e:
             print(f"❌ ERRO ao criar ZIP: {e}")
