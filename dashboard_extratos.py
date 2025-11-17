@@ -169,22 +169,20 @@ with col_title:
 # ========== SIDEBAR: SELEÇÃO DE BANCO ==========
 with st.sidebar:
     st.markdown("### 🏦 Banco")
-    banco_selecionado = st.radio(
-        "Selecione o banco:",
-        ["Santander", "Itaú (em breve)", "Arbi (em breve)"],
+    
+    # Usar selectbox ao invés de radio para visual mais limpo
+    banco_selecionado = st.selectbox(
+        "Banco:",
+        ["Santander"],
         index=0,
-        help="Atualmente disponível apenas Santander. Outros bancos em desenvolvimento."
+        help="Sistema de extratos bancários via Open Banking"
     )
     
-    # Desabilitar bancos não implementados
-    if banco_selecionado != "Santander":
-        st.warning("⚠️ Este banco ainda não está disponível. Use Santander por enquanto.")
-        st.stop()
-    
     st.markdown("---")
-    st.markdown("**Banco ativo:** Santander")
-    st.markdown("**API:** Open Banking")
-    st.markdown("**Formatos:** Excel + PDF")
+    st.markdown("**📊 Informações**")
+    st.markdown("• API: Open Banking")
+    st.markdown("• Formatos: Excel + PDF")
+    st.markdown("• Autenticação: OAuth2 + mTLS")
 
 # Import condicional - suporta tanto ambiente local quanto Streamlit Cloud
 try:
