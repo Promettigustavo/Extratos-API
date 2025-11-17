@@ -399,22 +399,48 @@ class SantanderExtratosBancarios:
                     todas_transacoes.extend(transacoes_pagina)
                     log(f"   Página {pagina}: {len(transacoes_pagina)} transações | Total: {len(todas_transacoes)}")
                     
-                    # DEBUG: Mostrar primeira transação
+                    # DEBUG: Mostrar primeira transação e info de paginação
                     if pagina == 1 and len(transacoes_pagina) > 0:
                         log(f"   📋 Exemplo de transação: {transacoes_pagina[0]}")
                     
-                    # Verificar se há próxima página
+                    # Verificar informações de paginação
+                    pageable = data.get("_pageable", {})
+                    if pageable:
+                        total_pages = pageable.get("totalPages", "?")
+                        total_records = pageable.get("totalRecords", "?")
+                        log(f"   📊 Paginação: página {pagina} de {total_pages} | Total de registros: {total_records}")
+                    
+                    # Continuar se:
+                    # 1. Retornou exatamente o limite (indica que pode ter mais)
+                    # 2. OU tem link 'next'
+                    # 3. OU totalPages indica que há mais páginas
+                    tem_mais_paginas = False
+                    
+                    if len(transacoes_pagina) >= limite:
+                        tem_mais_paginas = True
+                        log(f"   ➡️ Retornou {len(transacoes_pagina)} registros (limite={limite}), buscando próxima página...")
+                    
                     links = data.get("_links", {})
-                    if "next" not in links:
-                        log(f"   ✅ Última página alcançada (sem link 'next')")
+                    if "next" in links:
+                        tem_mais_paginas = True
+                        log(f"   ➡️ Link 'next' presente, buscando próxima página...")
+                    
+                    if pageable and str(pageable.get("totalPages", "0")) != "0":
+                        total_pages_num = int(pageable.get("totalPages", "0"))
+                        if pagina < total_pages_num:
+                            tem_mais_paginas = True
+                            log(f"   ➡️ Página {pagina} < {total_pages_num}, buscando próxima página...")
+                    
+                    if not tem_mais_paginas:
+                        log(f"   ✅ Última página alcançada")
                         break
                     
                     # Incrementar número da página
                     pagina += 1
                     
-                    # Segurança: evitar loop infinito
-                    if pagina > 100:  # Limite de segurança: 100 páginas
-                        log(f"   ⚠️ Limite de segurança atingido (100 páginas)")
+                    # Segurança: evitar loop infinito (aumentado para 500 páginas = 500k transações)
+                    if pagina > 500:
+                        log(f"   ⚠️ Limite de segurança atingido (500 páginas / ~500k transações)")
                         break
                 else:
                     log(f"❌ Erro ao buscar transações (página {pagina}): {response.status_code}")
