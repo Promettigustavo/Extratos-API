@@ -645,7 +645,7 @@ class SantanderExtratosBancarios:
             traceback.print_exc()
             return None
     
-    def gerar_pdf_extrato(self, transacoes, branch_code, account_number, pasta_saida=None, saldo_info=None):
+    def gerar_pdf_extrato(self, transacoes, branch_code, account_number, pasta_saida=None, saldo_info=None, data_inicial=None, data_final=None):
         """
         Gera PDF do extrato no formato IBE (Internet Banking Empresarial) Santander
         Replica exatamente o layout do exemplo do Santander IBE
@@ -656,6 +656,8 @@ class SantanderExtratosBancarios:
             account_number: Número da conta
             pasta_saida: Pasta para salvar (padrão: diretório atual)
             saldo_info: Informações de saldo (opcional)
+            data_inicial: Data inicial solicitada (datetime)
+            data_final: Data final solicitada (datetime)
         
         Returns:
             Caminho do arquivo gerado ou None
@@ -767,23 +769,32 @@ class SantanderExtratosBancarios:
                 leading=10
             )
             
-            # Determinar período
-            if transacoes:
+            # Determinar período - USAR DATAS SOLICITADAS, não das transações retornadas
+            import locale
+            try:
+                locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
+            except:
+                try:
+                    locale.setlocale(locale.LC_TIME, 'English_United States.1252')
+                except:
+                    pass
+            
+            if data_inicial and data_final:
+                # Usar datas solicitadas pelo usuário
+                try:
+                    periodo_inicio = data_inicial.strftime('%a %b %d 00:00:00 GMT-03:00 %Y')
+                    periodo_fim = data_final.strftime('%a %b %d 23:59:59 GMT-03:00 %Y')
+                except:
+                    periodo_inicio = data_inicial.strftime('%d/%m/%Y')
+                    periodo_fim = data_final.strftime('%d/%m/%Y')
+            elif transacoes:
+                # Fallback: usar primeira e última transação
                 primeira_trans = transacoes[0].get('transactionDate', '')
                 ultima_trans = transacoes[-1].get('transactionDate', '')
                 
                 if primeira_trans:
                     try:
                         dt_inicio = datetime.strptime(primeira_trans[:10], '%Y-%m-%d')
-                        # Formato: "Sat Nov 08 07:23:48 GMT-03:00 2025"
-                        import locale
-                        try:
-                            locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
-                        except:
-                            try:
-                                locale.setlocale(locale.LC_TIME, 'English_United States.1252')
-                            except:
-                                pass
                         periodo_inicio = dt_inicio.strftime('%a %b %d 00:00:00 GMT-03:00 %Y')
                     except:
                         periodo_inicio = primeira_trans
@@ -1207,7 +1218,9 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                         branch_code,
                         account_number,
                         pasta_saida=pasta_saida,
-                        saldo_info=saldo  # Passar info de saldo
+                        saldo_info=saldo,  # Passar info de saldo
+                        data_inicial=data_inicial,  # Passar data solicitada
+                        data_final=data_final  # Passar data solicitada
                     )
                     
                     if arquivo_pdf:
