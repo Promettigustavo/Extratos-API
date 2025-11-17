@@ -158,24 +158,25 @@ st.markdown("""
     
     /* Cards de banco na sidebar */
     .banco-card {
-        padding: 1rem;
+        padding: 0.75rem 1rem;
         margin: 0.5rem 0;
-        border-radius: 8px;
-        border: 2px solid #2daa82;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
         background-color: white;
-        cursor: pointer;
-        transition: all 0.3s ease;
+        text-align: center;
+        font-size: 1rem;
+        transition: all 0.2s ease;
     }
     .banco-card.selected {
-        background-color: #2daa82;
+        background-color: #14735a;
         color: white;
-        font-weight: bold;
+        border-color: #14735a;
+        font-weight: 600;
     }
     .banco-card.disabled {
-        border-color: #ccc;
-        background-color: #f5f5f5;
-        color: #999;
-        cursor: not-allowed;
+        background-color: #f8f8f8;
+        color: #aaa;
+        border-color: #e5e5e5;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -190,35 +191,18 @@ with col_title:
 
 # ========== SIDEBAR: SELEÇÃO DE BANCO ==========
 with st.sidebar:
-    st.markdown("### 🏦 Selecione o Banco")
+    st.markdown("### 🏦 Banco")
     
-    # Card para Santander (ativo)
-    st.markdown("""
-    <div class="banco-card selected">
-        <h4 style="margin: 0; color: white;">🟢 Santander</h4>
-        <small>Open Banking • OAuth2 + mTLS</small>
-    </div>
-    """, unsafe_allow_html=True)
-    
+    # Card Santander (ativo)
+    st.markdown('<div class="banco-card selected">Santander</div>', unsafe_allow_html=True)
     banco_selecionado = "Santander"
     
-    # Placeholder para futuros bancos (desabilitados)
-    st.markdown("""
-    <div class="banco-card disabled">
-        <h4 style="margin: 0; color: #999;">⚪ Itaú</h4>
-        <small style="color: #999;">Em breve</small>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="banco-card disabled">
-        <h4 style="margin: 0; color: #999;">⚪ Arbi</h4>
-        <small style="color: #999;">Em breve</small>
-    </div>
-    """, unsafe_allow_html=True)
+    # Cards futuros (desabilitados)
+    st.markdown('<div class="banco-card disabled">Itaú</div>', unsafe_allow_html=True)
+    st.markdown('<div class="banco-card disabled">Arbi</div>', unsafe_allow_html=True)
     
     st.markdown("---")
-    st.markdown("**📊 Formatos de Saída**")
+    st.markdown("**📊 Formatos**")
     st.markdown("• Excel (.xlsx)")
     st.markdown("• PDF (.pdf)")
 
