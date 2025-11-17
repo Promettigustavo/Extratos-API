@@ -178,20 +178,19 @@ class SantanderExtratosBancarios:
             print(f"⚠️  Certificado existe: {cert_exists} ({self.cert_path})")
             print(f"⚠️  Chave existe: {key_exists} ({self.key_path})")
         
-        # Endpoint correto para listar contas
-        url = "https://trust-open.api.santander.com.br/bank_account_information/v1/accounts"
+        # Endpoint correto para listar contas - inclui /banks/{BANK_ID}/ no path
+        url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/banks/{BANK_ID}/accounts"
         
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-            "X-Application-Key": self.client_id,
-            "X-CNPJ": self.cnpj  # Header obrigatório
+            "X-Application-Key": self.client_id
         }
         
-        # Parâmetros corretos para o endpoint /accounts
+        # Parâmetros corretos conforme collection
         params = {
-            "page": "1",
-            "page-size": "50"
+            "_offset": "1",
+            "_limit": "50"
         }
         
         # Log detalhado para debug
@@ -332,9 +331,15 @@ class SantanderExtratosBancarios:
         print(f"\n📊 Buscando transações da conta {branch_code}.{account_number}...")
         print(f"   Período: {data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}")
         
-        # Usar endpoint de transactions com account_id no formato agencia.conta
-        account_id = f"{branch_code}.{account_number}"
-        url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/transactions/{account_id}"
+        # Formatar account_id conforme API: AAAA.CCCCCCCCCCCC (4 dígitos agência + 12 dígitos conta)
+        branch_formatted = str(branch_code).zfill(4)  # Preenche com zeros à esquerda até 4 dígitos
+        account_formatted = str(account_number).zfill(12)  # Preenche com zeros à esquerda até 12 dígitos
+        account_id = f"{branch_formatted}.{account_formatted}"
+        
+        print(f"   🔢 Account ID formatado: {account_id}")
+        
+        # Usar endpoint de statements com account_id no formato agencia.conta
+        url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/banks/{BANK_ID}/statements/{account_id}"
         
         headers = {
             "Authorization": f"Bearer {token}",
@@ -352,7 +357,7 @@ class SantanderExtratosBancarios:
                     "initialDate": data_inicial.strftime("%Y-%m-%d"),
                     "finalDate": data_final.strftime("%Y-%m-%d"),
                     "_limit": str(limite),
-                    "_nextPage": str(pagina)
+                    "_offset": str(pagina)
                 }
                 
                 response = requests.get(
