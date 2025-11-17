@@ -25,6 +25,16 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 
+# Controle de verbosidade (pode ser alterado externamente)
+VERBOSE = True
+
+
+def log(mensagem):
+    """Print condicional baseado em VERBOSE"""
+    if VERBOSE:
+        print(mensagem)
+
+
 # Tentar importar credenciais - suporta Streamlit Cloud e local
 try:
     # Primeiro tenta config_credentials (suporta Streamlit Secrets)
@@ -38,7 +48,7 @@ try:
 except ImportError:
     HAS_CREDENCIAIS = False
     SANTANDER_FUNDOS = {}
-    print("⚠️  Credenciais não disponíveis")
+    log("⚠️  Credenciais não disponíveis")
 
 # Configurações para extrato
 CERT_PATH = r"C:\Users\GustavoPrometti\Cert\santander_cert.pem"
@@ -75,9 +85,9 @@ class SantanderExtratosBancarios:
         self.token_expira = None
         
         # Debug: mostrar caminhos dos certificados
-        print(f"🔐 Certificados configurados:")
-        print(f"   cert_path: {self.cert_path}")
-        print(f"   key_path: {self.key_path}")
+        log(f"🔐 Certificados configurados:")
+        log(f"   cert_path: {self.cert_path}")
+        log(f"   key_path: {self.key_path}")
         
         # Contas conhecidas como fallback para erro 401 em /accounts
         self.contas_conhecidas = {
@@ -101,13 +111,13 @@ class SantanderExtratosBancarios:
         if self.token and self.token_expira and datetime.now() < self.token_expira:
             return self.token
         
-        print(f"\n🔑 Obtendo token OAuth2 para fundo {self.fundo_id}...")
-        print(f"   Client ID: {self.client_id[:10]}...")
-        print(f"   CNPJ: {self.cnpj}")
+        log(f"\n🔑 Obtendo token OAuth2 para fundo {self.fundo_id}...")
+        log(f"   Client ID: {self.client_id[:10]}...")
+        log(f"   CNPJ: {self.cnpj}")
         
         # URL que funciona (testado localmente e no Streamlit Cloud)
         url = "https://trust-open.api.santander.com.br/auth/oauth/v2/token"
-        print(f"   🔗 URL do token: {url}")
+        log(f"   🔗 URL do token: {url}")
         
         # Autenticação usando Basic Auth (padrão OAuth2)
         auth_string = f"{self.client_id}:{self.client_secret}"
@@ -123,10 +133,10 @@ class SantanderExtratosBancarios:
             "scope": "open_banking_balances_statement"
         }
         
-        print(f"   📊 Escopo solicitado: {data['scope']}")
+        log(f"   📊 Escopo solicitado: {data['scope']}")
         
         try:
-            print(f"   🚀 Enviando requisição de token...")
+            log(f"   🚀 Enviando requisição de token...")
             response = requests.post(
                 url, 
                 headers=headers, 
@@ -141,23 +151,23 @@ class SantanderExtratosBancarios:
                 expires_in = token_data.get("expires_in", 900)
                 self.token_expira = datetime.now() + timedelta(seconds=expires_in - 60)
                 
-                print(f"✅ Token obtido com sucesso (válido por {expires_in}s)")
-                print(f"   Token: {self.token[:20] if self.token else 'NONE'}...")
+                log(f"✅ Token obtido com sucesso (válido por {expires_in}s)")
+                log(f"   Token: {self.token[:20] if self.token else 'NONE'}...")
                 
                 # Verificar se token tem o escopo necessário
                 scope_recebido = token_data.get("scope", "")
-                print(f"   📋 Escopo recebido: {scope_recebido}")
+                log(f"   📋 Escopo recebido: {scope_recebido}")
                 if "account" not in scope_recebido.lower():
-                    print(f"   ⚠️ AVISO: Token pode não ter permissão para accounts!")
+                    log(f"   ⚠️ AVISO: Token pode não ter permissão para accounts!")
                 
                 return self.token
             else:
-                print(f"❌ Erro ao obter token: {response.status_code}")
-                print(f"   Resposta: \n    {json.dumps(response.json(), indent=6) if response.content else 'Vazio'}")
+                log(f"❌ Erro ao obter token: {response.status_code}")
+                log(f"   Resposta: \n    {json.dumps(response.json(), indent=6) if response.content else 'Vazio'}")
                 return None
                 
         except Exception as e:
-            print(f"❌ Exceção ao obter token: {e}")
+            log(f"❌ Exceção ao obter token: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -168,15 +178,15 @@ class SantanderExtratosBancarios:
         if not token:
             return []
         
-        print(f"\n🏦 Listando contas bancárias do fundo {self.fundo_id}...")
+        log(f"\n🏦 Listando contas bancárias do fundo {self.fundo_id}...")
         
         # Debug: verificar certificados
         from pathlib import Path
         cert_exists = Path(self.cert_path).exists()
         key_exists = Path(self.key_path).exists()
         if not cert_exists or not key_exists:
-            print(f"⚠️  Certificado existe: {cert_exists} ({self.cert_path})")
-            print(f"⚠️  Chave existe: {key_exists} ({self.key_path})")
+            log(f"⚠️  Certificado existe: {cert_exists} ({self.cert_path})")
+            log(f"⚠️  Chave existe: {key_exists} ({self.key_path})")
         
         # Endpoint correto para listar contas - inclui /banks/{BANK_ID}/ no path
         url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/banks/{BANK_ID}/accounts"
@@ -194,12 +204,12 @@ class SantanderExtratosBancarios:
         }
         
         # Log detalhado para debug
-        print(f"   🔗 URL: {url}")
-        print(f"   🗂️ Headers: X-Application-Key={self.client_id[:10]}..., X-CNPJ={self.cnpj}")
-        print(f"   📊 Params: {params}")
+        log(f"   🔗 URL: {url}")
+        log(f"   🗂️ Headers: X-Application-Key={self.client_id[:10]}..., X-CNPJ={self.cnpj}")
+        log(f"   📊 Params: {params}")
         
         try:
-            print(f"   🚀 Fazendo requisição para API...")
+            log(f"   🚀 Fazendo requisição para API...")
             response = requests.get(
                 url,
                 headers=headers,
@@ -208,15 +218,15 @@ class SantanderExtratosBancarios:
                 timeout=30
             )
             
-            print(f"   📡 Resposta recebida - Status: {response.status_code}")
-            print(f"   📏 Tamanho da resposta: {len(response.text)} caracteres")
+            log(f"   📡 Resposta recebida - Status: {response.status_code}")
+            log(f"   📏 Tamanho da resposta: {len(response.text)} caracteres")
             
             if response.status_code == 200:
                 data = response.json()
                 
                 # Log da resposta completa para debug
-                print(f"   📋 DEBUG - Resposta completa da API:")
-                print(f"   {json.dumps(data, indent=2)[:1000]}...")
+                log(f"   📋 DEBUG - Resposta completa da API:")
+                log(f"   {json.dumps(data, indent=2)[:1000]}...")
                 
                 # Tentar diferentes estruturas de resposta
                 contas = []
@@ -224,38 +234,38 @@ class SantanderExtratosBancarios:
                 # Estrutura 1: data.accounts (nova API)
                 if "data" in data and isinstance(data["data"], dict) and "accounts" in data["data"]:
                     contas = data["data"]["accounts"]
-                    print(f"   ✅ Estrutura 1 (data.accounts): {len(contas)} contas")
+                    log(f"   ✅ Estrutura 1 (data.accounts): {len(contas)} contas")
                 
                 # Estrutura 2: data como lista direta
                 elif "data" in data and isinstance(data["data"], list):
                     contas = data["data"]
-                    print(f"   ✅ Estrutura 2 (data lista): {len(contas)} contas")
+                    log(f"   ✅ Estrutura 2 (data lista): {len(contas)} contas")
                 
                 # Estrutura 3: _content (API antiga)
                 elif "_content" in data:
                     contas = data["_content"]
-                    print(f"   ✅ Estrutura 3 (_content): {len(contas)} contas")
+                    log(f"   ✅ Estrutura 3 (_content): {len(contas)} contas")
                 
                 # Estrutura 4: accounts direto
                 elif "accounts" in data:
                     contas = data["accounts"]
-                    print(f"   ✅ Estrutura 4 (accounts direto): {len(contas)} contas")
+                    log(f"   ✅ Estrutura 4 (accounts direto): {len(contas)} contas")
                 
                 else:
-                    print(f"   ❌ Estrutura desconhecida na resposta!")
-                    print(f"   Keys disponíveis: {list(data.keys())}")
+                    log(f"   ❌ Estrutura desconhecida na resposta!")
+                    log(f"   Keys disponíveis: {list(data.keys())}")
                 
-                print(f"✅ {len(contas)} conta(s) encontrada(s)")
+                log(f"✅ {len(contas)} conta(s) encontrada(s)")
                 
                 # Debug: mostrar resposta completa se não encontrar contas
                 if len(contas) == 0:
-                    print(f"   🔍 ATENÇÃO: Nenhuma conta retornada pela API!")
-                    print(f"   Resposta completa: {json.dumps(data, indent=2)}")
+                    log(f"   🔍 ATENÇÃO: Nenhuma conta retornada pela API!")
+                    log(f"   Resposta completa: {json.dumps(data, indent=2)}")
                 
                 for conta in contas:
                     branch_code = conta.get('branchCode') or conta.get('agencyCode')
                     account_number = conta.get('number') or conta.get('accountNumber')
-                    print(f"   • Agência: {branch_code} - Conta: {account_number}")
+                    log(f"   • Agência: {branch_code} - Conta: {account_number}")
                     
                     # Garantir que temos os campos necessários
                     if not conta.get('branchCode') and conta.get('agencyCode'):
@@ -265,41 +275,41 @@ class SantanderExtratosBancarios:
                 
                 return contas
             else:
-                print(f"❌ Erro ao listar contas: {response.status_code}")
-                print(f"   URL chamada: {url}")
-                print(f"   Headers enviados: {json.dumps({k: v[:20] + '...' if len(v) > 20 else v for k, v in headers.items()}, indent=2)}")
-                print(f"   Parâmetros: {params}")
-                print(f"   Resposta completa: {response.text}")
+                log(f"❌ Erro ao listar contas: {response.status_code}")
+                log(f"   URL chamada: {url}")
+                log(f"   Headers enviados: {json.dumps({k: v[:20] + '...' if len(v) > 20 else v for k, v in headers.items()}, indent=2)}")
+                log(f"   Parâmetros: {params}")
+                log(f"   Resposta completa: {response.text}")
                 
                 # ✅ FALLBACK: Se erro 401, usar contas conhecidas
                 if response.status_code == 401:
-                    print(f"   🔄 Tentando fallback para contas conhecidas...")
+                    log(f"   🔄 Tentando fallback para contas conhecidas...")
                     contas_conhecidas = self.obter_contas_conhecidas()
                     if contas_conhecidas:
-                        print(f"   ✅ Usando {len(contas_conhecidas)} conta(s) conhecida(s)")
+                        log(f"   ✅ Usando {len(contas_conhecidas)} conta(s) conhecida(s)")
                         for conta in contas_conhecidas:
-                            print(f"   • Agência: {conta['branchCode']} - Conta: {conta['number']}")
+                            log(f"   • Agência: {conta['branchCode']} - Conta: {conta['number']}")
                         return contas_conhecidas
                     else:
-                        print(f"   ❌ Nenhuma conta conhecida configurada para {self.fundo_nome}")
+                        log(f"   ❌ Nenhuma conta conhecida configurada para {self.fundo_nome}")
                 
                 # Tentar interpretar erro
                 try:
                     error_data = response.json()
                     if "errors" in error_data:
                         for error in error_data["errors"]:
-                            print(f"   🚨 Erro API: {error.get('title', 'N/A')} - {error.get('detail', 'N/A')}")
+                            log(f"   🚨 Erro API: {error.get('title', 'N/A')} - {error.get('detail', 'N/A')}")
                 except:
                     pass
                 
                 return []
                 
         except Exception as e:
-            print(f"❌ Exceção ao listar contas: {e}")
-            print(f"   URL tentada: {url}")
-            print(f"   Certificados: cert={self.cert_path}, key={self.key_path}")
-            print(f"   Client ID: {self.client_id[:10]}...")
-            print(f"   CNPJ: {self.cnpj}")
+            log(f"❌ Exceção ao listar contas: {e}")
+            log(f"   URL tentada: {url}")
+            log(f"   Certificados: cert={self.cert_path}, key={self.key_path}")
+            log(f"   Client ID: {self.client_id[:10]}...")
+            log(f"   CNPJ: {self.cnpj}")
             import traceback
             traceback.print_exc()
             return []
@@ -328,15 +338,15 @@ class SantanderExtratosBancarios:
         if not data_inicial:
             data_inicial = data_final - timedelta(days=7)
         
-        print(f"\n📊 Buscando transações da conta {branch_code}.{account_number}...")
-        print(f"   Período: {data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}")
+        log(f"\n📊 Buscando transações da conta {branch_code}.{account_number}...")
+        log(f"   Período: {data_inicial.strftime('%d/%m/%Y')} a {data_final.strftime('%d/%m/%Y')}")
         
         # Formatar account_id conforme API: AAAA.CCCCCCCCCCCC (4 dígitos agência + 12 dígitos conta)
         branch_formatted = str(branch_code).zfill(4)  # Preenche com zeros à esquerda até 4 dígitos
         account_formatted = str(account_number).zfill(12)  # Preenche com zeros à esquerda até 12 dígitos
         account_id = f"{branch_formatted}.{account_formatted}"
         
-        print(f"   🔢 Account ID formatado: {account_id}")
+        log(f"   🔢 Account ID formatado: {account_id}")
         
         # Usar endpoint de statements com account_id no formato agencia.conta
         url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/banks/{BANK_ID}/statements/{account_id}"
@@ -373,23 +383,23 @@ class SantanderExtratosBancarios:
                     
                     # DEBUG: Mostrar resposta completa na primeira página
                     if pagina == 1:
-                        print(f"   📋 DEBUG - Resposta da API (página 1):")
-                        print(f"   Keys disponíveis: {list(data.keys())}")
-                        print(f"   Resposta completa: {str(data)[:1000]}")
+                        log(f"   📋 DEBUG - Resposta da API (página 1):")
+                        log(f"   Keys disponíveis: {list(data.keys())}")
+                        log(f"   Resposta completa: {str(data)[:1000]}")
                     
                     transacoes_pagina = data.get("_content", [])
                     
                     if not transacoes_pagina:
                         # Não há mais transações
-                        print(f"   ⚠️ Página {pagina} retornou 0 transações. Encerrando busca.")
+                        log(f"   ⚠️ Página {pagina} retornou 0 transações. Encerrando busca.")
                         break
                     
                     todas_transacoes.extend(transacoes_pagina)
-                    print(f"   Página {pagina}: {len(transacoes_pagina)} transações | Total: {len(todas_transacoes)}")
+                    log(f"   Página {pagina}: {len(transacoes_pagina)} transações | Total: {len(todas_transacoes)}")
                     
                     # DEBUG: Mostrar primeira transação
                     if pagina == 1 and len(transacoes_pagina) > 0:
-                        print(f"   📋 Exemplo de transação: {transacoes_pagina[0]}")
+                        log(f"   📋 Exemplo de transação: {transacoes_pagina[0]}")
                     
                     # Verificar se há próxima página
                     links = data.get("_links", {})
@@ -398,15 +408,15 @@ class SantanderExtratosBancarios:
                     
                     pagina += 1
                 else:
-                    print(f"❌ Erro ao buscar transações (página {pagina}): {response.status_code}")
-                    print(f"   Resposta: {response.text[:500]}")
+                    log(f"❌ Erro ao buscar transações (página {pagina}): {response.status_code}")
+                    log(f"   Resposta: {response.text[:500]}")
                     break
             
-            print(f"✅ Total de {len(todas_transacoes)} transação(ões) encontrada(s)")
+            log(f"✅ Total de {len(todas_transacoes)} transação(ões) encontrada(s)")
             return todas_transacoes
                 
         except Exception as e:
-            print(f"❌ Exceção ao buscar transações: {e}")
+            log(f"❌ Exceção ao buscar transações: {e}")
             import traceback
             traceback.print_exc()
             return todas_transacoes if todas_transacoes else []
@@ -426,14 +436,14 @@ class SantanderExtratosBancarios:
         if not token:
             return None
         
-        print(f"\n💰 Buscando saldo da conta {branch_code}.{account_number}...")
+        log(f"\n💰 Buscando saldo da conta {branch_code}.{account_number}...")
         
         # Formatar account_id conforme API: AAAA.CCCCCCCCCCCC (4 dígitos agência + 12 dígitos conta)
         branch_formatted = str(branch_code).zfill(4)
         account_formatted = str(account_number).zfill(12)
         account_id = f"{branch_formatted}.{account_formatted}"
         
-        print(f"   🔢 Account ID formatado: {account_id}")
+        log(f"   🔢 Account ID formatado: {account_id}")
         
         url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/banks/{BANK_ID}/balances/{account_id}"
         
@@ -457,18 +467,18 @@ class SantanderExtratosBancarios:
                 bloqueado = float(saldo_data.get("blockedAmount", 0))
                 investido = float(saldo_data.get("automaticallyInvestedAmount", 0))
                 
-                print(f"✅ Saldo disponível: R$ {disponivel:,.2f}")
-                print(f"   Bloqueado: R$ {bloqueado:,.2f}")
-                print(f"   Investido automaticamente: R$ {investido:,.2f}")
+                log(f"✅ Saldo disponível: R$ {disponivel:,.2f}")
+                log(f"   Bloqueado: R$ {bloqueado:,.2f}")
+                log(f"   Investido automaticamente: R$ {investido:,.2f}")
                 
                 return saldo_data
             else:
-                print(f"❌ Erro ao buscar saldo: {response.status_code}")
-                print(f"   Resposta: {response.text[:500]}")
+                log(f"❌ Erro ao buscar saldo: {response.status_code}")
+                log(f"   Resposta: {response.text[:500]}")
                 return None
                 
         except Exception as e:
-            print(f"❌ Exceção ao buscar saldo: {e}")
+            log(f"❌ Exceção ao buscar saldo: {e}")
             return None
     
     def exportar_transacoes_excel(self, transacoes, branch_code, account_number, pasta_saida=None, saldo_info=None):
@@ -486,7 +496,7 @@ class SantanderExtratosBancarios:
             Caminho do arquivo gerado ou None
         """
         num_transacoes = len(transacoes) if transacoes else 0
-        print(f"\n📝 Exportando {num_transacoes} transação(ões) para Excel...")
+        log(f"\n📝 Exportando {num_transacoes} transação(ões) para Excel...")
         
         # Definir pasta de saída
         if not pasta_saida:
@@ -535,7 +545,7 @@ class SantanderExtratosBancarios:
             dados.append([primeira_data, None, 'SALDO ANTERIOR', None, None, saldo])
         
         # Debug: mostrar se há transações
-        print(f"📝 Processando {len(transacoes)} transações para Excel...")
+        log(f"📝 Processando {len(transacoes)} transações para Excel...")
         
         # Adicionar transações
         for trans in transacoes:
@@ -564,9 +574,9 @@ class SantanderExtratosBancarios:
             dados.append([data, None, historico, documento, valor, saldo])
         
         # DEBUG: Mostrar quantas linhas foram adicionadas
-        print(f"📊 Total de linhas no DataFrame: {len(dados)} (incluindo 3 linhas de cabeçalho)")
+        log(f"📊 Total de linhas no DataFrame: {len(dados)} (incluindo 3 linhas de cabeçalho)")
         if len(dados) > 3:
-            print(f"   Exemplo de linha de dados: {dados[3]}")
+            log(f"   Exemplo de linha de dados: {dados[3]}")
         
         # Criar DataFrame
         df = pd.DataFrame(dados)
@@ -618,19 +628,19 @@ class SantanderExtratosBancarios:
                     adjusted_width = min(max(max_length + 2, 10), 50)
                     worksheet.column_dimensions[column_letter].width = adjusted_width
             
-            print(f"✅ Extrato salvo em: {filename}")
-            print(f"   Caminho completo: {filepath}")
+            log(f"✅ Extrato salvo em: {filename}")
+            log(f"   Caminho completo: {filepath}")
             
             # Verificar se arquivo foi criado
             if os.path.exists(filepath):
                 tamanho = os.path.getsize(filepath)
-                print(f"   Tamanho: {tamanho} bytes")
+                log(f"   Tamanho: {tamanho} bytes")
             else:
-                print(f"   ⚠️ AVISO: Arquivo não encontrado após salvar!")
+                log(f"   ⚠️ AVISO: Arquivo não encontrado após salvar!")
             
             return filepath
         except Exception as e:
-            print(f"❌ Erro ao salvar Excel: {e}")
+            log(f"❌ Erro ao salvar Excel: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -651,7 +661,7 @@ class SantanderExtratosBancarios:
             Caminho do arquivo gerado ou None
         """
         num_transacoes = len(transacoes) if transacoes else 0
-        print(f"\n📄 Gerando PDF com {num_transacoes} transação(ões)...")
+        log(f"\n📄 Gerando PDF com {num_transacoes} transação(ões)...")
         
         # Definir pasta de saída
         if not pasta_saida:
@@ -664,7 +674,7 @@ class SantanderExtratosBancarios:
         
         # Verificar se arquivo já existe para evitar duplicação
         if os.path.exists(filepath):
-            print(f"⚠️  PDF já existe, sobrescrevendo: {filename}")
+            log(f"⚠️  PDF já existe, sobrescrevendo: {filename}")
         
         try:
             # Criar documento PDF com margens exatas do IBE (29pts = 10.23mm)
@@ -842,8 +852,8 @@ class SantanderExtratosBancarios:
                 
                 # DEBUG na primeira transação
                 if len(table_data) == 2:  # Logo após cabeçalho e saldo anterior
-                    print(f"   📋 DEBUG PDF - Primeira transação:")
-                    print(f"      Data: {data}, Histórico: {historico}, Valor: {valor}, Tipo: {tipo}")
+                    log(f"   📋 DEBUG PDF - Primeira transação:")
+                    log(f"      Data: {data}, Histórico: {historico}, Valor: {valor}, Tipo: {tipo}")
                 
                 # Ajustar sinal
                 if tipo == 'DEBITO':
@@ -1034,20 +1044,20 @@ class SantanderExtratosBancarios:
             # Gerar PDF
             doc.build(elements)
             
-            print(f"✅ PDF gerado: {filename}")
-            print(f"   Caminho completo: {filepath}")
+            log(f"✅ PDF gerado: {filename}")
+            log(f"   Caminho completo: {filepath}")
             
             # Verificar se arquivo foi criado
             if os.path.exists(filepath):
                 tamanho = os.path.getsize(filepath)
-                print(f"   Tamanho: {tamanho} bytes")
+                log(f"   Tamanho: {tamanho} bytes")
             else:
-                print(f"   ⚠️ AVISO: Arquivo não encontrado após salvar!")
+                log(f"   ⚠️ AVISO: Arquivo não encontrado após salvar!")
             
             return filepath
             
         except Exception as e:
-            print(f"❌ Erro ao gerar PDF: {e}")
+            log(f"❌ Erro ao gerar PDF: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -1064,12 +1074,12 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
         pasta_saida: Pasta para salvar arquivos
         gerar_pdf: Se True, gera também PDF do extrato
     """
-    print("="*80)
-    print("BUSCA DE EXTRATOS BANCÁRIOS SANTANDER")
-    print("="*80)
+    log("="*80)
+    log("BUSCA DE EXTRATOS BANCÁRIOS SANTANDER")
+    log("="*80)
     
     # 🧹 LIMPEZA DE CACHE: Remover tokens antigos
-    print("\n🧹 Limpando cache de tokens...")
+    log("\n🧹 Limpando cache de tokens...")
     import glob
     tokens_removidos = 0
     try:
@@ -1082,14 +1092,14 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                     os.remove(token_file)
                     tokens_removidos += 1
                 except Exception as e:
-                    print(f"⚠️ Não foi possível remover {os.path.basename(token_file)}: {e}")
+                    log(f"⚠️ Não foi possível remover {os.path.basename(token_file)}: {e}")
     except Exception as e:
-        print(f"⚠️ Erro ao limpar cache: {e}")
+        log(f"⚠️ Erro ao limpar cache: {e}")
     
     if tokens_removidos > 0:
-        print(f"✅ {tokens_removidos} token(s) de cache removido(s)")
+        log(f"✅ {tokens_removidos} token(s) de cache removido(s)")
     else:
-        print("✅ Nenhum token de cache encontrado")
+        log("✅ Nenhum token de cache encontrado")
     
     # Determinar quais fundos processar
     if not fundos:
@@ -1097,7 +1107,7 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
         fundos = [fid for fid, creds in SANTANDER_FUNDOS.items() 
                   if creds.get("client_id") and creds.get("client_secret")]
     
-    print(f"\n📋 Fundos a processar: {', '.join(fundos)}")
+    log(f"\n📋 Fundos a processar: {', '.join(fundos)}")
     
     # Rastreamento de resultados
     fundos_com_transacoes = []
@@ -1106,39 +1116,39 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
     
     # Processar cada fundo
     for fundo_id in fundos:
-        print(f"\n{'='*80}")
-        print(f"PROCESSANDO FUNDO: {fundo_id}")
-        print(f"{'='*80}")
+        log(f"\n{'='*80}")
+        log(f"PROCESSANDO FUNDO: {fundo_id}")
+        log(f"{'='*80}")
         
         try:
-            print(f"\n🔧 Criando cliente para fundo {fundo_id}...")
+            log(f"\n🔧 Criando cliente para fundo {fundo_id}...")
             # Criar cliente
             cliente = SantanderExtratosBancarios(fundo_id)
-            print(f"✅ Cliente criado com sucesso")
+            log(f"✅ Cliente criado com sucesso")
             
-            print(f"🏦 Iniciando listagem de contas...")
+            log(f"🏦 Iniciando listagem de contas...")
             # Listar contas
             contas = cliente.listar_contas()
-            print(f"📊 Resultado da listagem: {len(contas) if contas else 0} contas")
+            log(f"📊 Resultado da listagem: {len(contas) if contas else 0} contas")
             
             if not contas:
-                print(f"⚠️  Nenhuma conta encontrada para o fundo {fundo_id}")
-                print(f"   Isso pode indicar:")
-                print(f"   - Token obtido mas sem permissão para listar contas")
-                print(f"   - Endpoint /accounts retornou estrutura vazia")
-                print(f"   - CNPJ {cliente.cnpj} não possui contas no Santander")
-                print(f"   - Credenciais incorretas ou expiradas")
-                print(f"   - Problema na API de listagem de contas")
+                log(f"⚠️  Nenhuma conta encontrada para o fundo {fundo_id}")
+                log(f"   Isso pode indicar:")
+                log(f"   - Token obtido mas sem permissão para listar contas")
+                log(f"   - Endpoint /accounts retornou estrutura vazia")
+                log(f"   - CNPJ {cliente.cnpj} não possui contas no Santander")
+                log(f"   - Credenciais incorretas ou expiradas")
+                log(f"   - Problema na API de listagem de contas")
                 fundos_com_erro.append(fundo_id)
                 continue
             
-            print(f"📊 Total de contas encontradas: {len(contas)}")
+            log(f"📊 Total de contas encontradas: {len(contas)}")
             if len(contas) > 1:
-                print(f"   🔍 ATENÇÃO: Fundo com MÚLTIPLAS CONTAS detectado!")
+                log(f"   🔍 ATENÇÃO: Fundo com MÚLTIPLAS CONTAS detectado!")
                 for i, c in enumerate(contas, 1):
                     branch = c.get('branchCode') or c.get('agencyCode')
                     account = c.get('number') or c.get('accountNumber')
-                    print(f"      Conta {i}: {branch}.{account}")
+                    log(f"      Conta {i}: {branch}.{account}")
             
             # Flag para rastrear se o fundo teve alguma transação
             fundo_teve_transacoes = False
@@ -1150,16 +1160,16 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                 account_number = conta.get('number') or conta.get('accountNumber')
                 
                 if not branch_code or not account_number:
-                    print(f"❌ Conta {i}: Dados incompletos - Branch: {branch_code}, Account: {account_number}")
+                    log(f"❌ Conta {i}: Dados incompletos - Branch: {branch_code}, Account: {account_number}")
                     continue
                 
-                print(f"\n{'-'*80}")
-                print(f"Processando Conta {i}/{len(contas)}: {branch_code}.{account_number}")
-                print(f"{'-'*80}")
+                log(f"\n{'-'*80}")
+                log(f"Processando Conta {i}/{len(contas)}: {branch_code}.{account_number}")
+                log(f"{'-'*80}")
                 
                 # Buscar saldo
                 saldo = cliente.buscar_saldo(branch_code, account_number)
-                print(f"💰 Saldo obtido: {saldo}")
+                log(f"💰 Saldo obtido: {saldo}")
                 
                 # Buscar transações
                 transacoes = cliente.buscar_transacoes(
@@ -1169,9 +1179,9 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                     data_final=data_final
                 )
                 
-                print(f"📊 Transações recebidas da API: {len(transacoes) if transacoes else 0}")
+                log(f"📊 Transações recebidas da API: {len(transacoes) if transacoes else 0}")
                 if transacoes and len(transacoes) > 0:
-                    print(f"   Primeira transação: {transacoes[0]}")
+                    log(f"   Primeira transação: {transacoes[0]}")
                     fundo_teve_transacoes = True
                 
                 # SEMPRE exportar Excel, mesmo sem transações (mostra saldo)
@@ -1188,7 +1198,7 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                 
                 if arquivo_excel:
                     arquivos_gerados += 1
-                    print(f"   ✅ Excel gerado: {os.path.basename(arquivo_excel)}")
+                    log(f"   ✅ Excel gerado: {os.path.basename(arquivo_excel)}")
                 
                 # Gerar PDF se solicitado (mesmo sem transações)
                 if gerar_pdf:
@@ -1202,13 +1212,13 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                     
                     if arquivo_pdf:
                         arquivos_gerados += 1
-                        print(f"   ✅ PDF gerado: {os.path.basename(arquivo_pdf)}")
+                        log(f"   ✅ PDF gerado: {os.path.basename(arquivo_pdf)}")
             
             # Relatório final do fundo
-            print(f"\n📈 FUNDO {fundo_id} - PROCESSAMENTO CONCLUÍDO:")
-            print(f"   📊 Contas processadas: {len(contas)}")
-            print(f"   📄 Arquivos gerados: {arquivos_gerados}")
-            print(f"   💰 Teve transações: {'✅ SIM' if fundo_teve_transacoes else '❌ NÃO'}")
+            log(f"\n📈 FUNDO {fundo_id} - PROCESSAMENTO CONCLUÍDO:")
+            log(f"   📊 Contas processadas: {len(contas)}")
+            log(f"   📄 Arquivos gerados: {arquivos_gerados}")
+            log(f"   💰 Teve transações: {'✅ SIM' if fundo_teve_transacoes else '❌ NÃO'}")
             
             # Adicionar fundo na lista apropriada
             if fundo_teve_transacoes:
@@ -1217,39 +1227,39 @@ def main(fundos=None, data_inicial=None, data_final=None, pasta_saida=None, gera
                 fundos_sem_transacoes.append(fundo_id)
         
         except Exception as e:
-            print(f"\n❌ Erro ao processar fundo {fundo_id}: {e}")
+            log(f"\n❌ Erro ao processar fundo {fundo_id}: {e}")
             fundos_com_erro.append(fundo_id)
             import traceback
             traceback.print_exc()
     
-    print("\n" + "="*80)
-    print("PROCESSAMENTO CONCLUÍDO")
-    print("="*80)
+    log("\n" + "="*80)
+    log("PROCESSAMENTO CONCLUÍDO")
+    log("="*80)
     
     # Relatório final
-    print("\n📊 RESUMO DO PROCESSAMENTO")
-    print("-"*80)
+    log("\n📊 RESUMO DO PROCESSAMENTO")
+    log("-"*80)
     
     if fundos_com_transacoes:
-        print(f"\n✅ Fundos COM transações no período ({len(fundos_com_transacoes)}):")
+        log(f"\n✅ Fundos COM transações no período ({len(fundos_com_transacoes)}):")
         for fundo in fundos_com_transacoes:
             fundo_nome = SANTANDER_FUNDOS.get(fundo, {}).get('nome', fundo)
-            print(f"   • {fundo_nome}")
+            log(f"   • {fundo_nome}")
     
     if fundos_sem_transacoes:
-        print(f"\n⚠️  Fundos SEM transações no período ({len(fundos_sem_transacoes)}):")
+        log(f"\n⚠️  Fundos SEM transações no período ({len(fundos_sem_transacoes)}):")
         for fundo in fundos_sem_transacoes:
             fundo_nome = SANTANDER_FUNDOS.get(fundo, {}).get('nome', fundo)
-            print(f"   • {fundo_nome}")
-        print("\n   💡 Arquivos foram gerados mostrando apenas os saldos atuais")
+            log(f"   • {fundo_nome}")
+        log("\n   💡 Arquivos foram gerados mostrando apenas os saldos atuais")
     
     if fundos_com_erro:
-        print(f"\n❌ Fundos com ERRO ({len(fundos_com_erro)}):")
+        log(f"\n❌ Fundos com ERRO ({len(fundos_com_erro)}):")
         for fundo in fundos_com_erro:
             fundo_nome = SANTANDER_FUNDOS.get(fundo, {}).get('nome', fundo)
-            print(f"   • {fundo_nome}")
+            log(f"   • {fundo_nome}")
     
-    print("\n" + "="*80)
+    log("\n" + "="*80)
 
 
 if __name__ == "__main__":

@@ -216,6 +216,9 @@ try:
         from credenciais_bancos import SANTANDER_FUNDOS
     
     from buscar_extratos_bancarios import SantanderExtratosBancarios, main
+    import buscar_extratos_bancarios
+    # Desabilitar logs verbosos
+    buscar_extratos_bancarios.VERBOSE = False
     HAS_CREDENCIAIS = True
 except ImportError as e:
     HAS_CREDENCIAIS = False
@@ -337,55 +340,56 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
     # Marcar como processando para evitar cliques duplos
     st.session_state.processando = True
     
-    # 🧹 LIMPEZA: Remover arquivos antigos da pasta de saída
+    # 🧹 LIMPEZA: Remover arquivos antigos da pasta de saída (silencioso)
     pasta_saida = os.getcwd()
-    print("🧹 Limpando arquivos temporários...")
     
     arquivos_antigos = []
     for arquivo in os.listdir(pasta_saida):
-        # Limpar apenas arquivos gerados pelo sistema
         if arquivo.startswith('exportar-Santander') or arquivo.startswith('comprovante-ibe'):
             caminho_completo = os.path.join(pasta_saida, arquivo)
             try:
                 os.remove(caminho_completo)
                 arquivos_antigos.append(arquivo)
-            except Exception as e:
-                print(f"⚠️ Não foi possível remover {arquivo}: {e}")
-    
-    if arquivos_antigos:
-        print(f"✅ {len(arquivos_antigos)} arquivo(s) antigo(s) removido(s)")
-    else:
-        print("✅ Nenhum arquivo antigo encontrado")
+            except:
+                pass  # Silenciar erros de remoção
     
     # Barra de progresso e status
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    progress_container = st.container()
+    with progress_container:
+        progress_bar = st.progress(0)
+        status_text = st.empty()
     
     # Preparar parâmetros - converter date para datetime
     from datetime import datetime as dt
     data_inicial_dt = dt.combine(data_inicial, dt.min.time())
     data_final_dt = dt.combine(data_final, dt.max.time())
     
-    status_text.text(f"🔄 Processando {len(fundos_selecionados)} fundo(s)...")
+    # Atualizar status inicial
+    status_text.info(f"🔄 Iniciando busca de extratos para {len(fundos_selecionados)} fundo(s)...")
     progress_bar.progress(0.1)
     
-    # Container para logs em tempo real
-    log_container = st.expander("📋 Logs de Processamento", expanded=True)
-    
-    # Capturar stdout
+    # Capturar stdout para silenciar logs técnicos
     import sys
     from io import StringIO
     
     old_stdout = sys.stdout
-    sys.stdout = log_output = StringIO()
+    sys.stdout = StringIO()  # Redirecionar para silenciar
     
     arquivos_gerados = []
     
-    # Marcar timestamp de início - buscar arquivos dos últimos 15 minutos
+    # Marcar timestamp de início
     from datetime import datetime, timedelta
     timestamp_inicio = datetime.now() - timedelta(minutes=15)
     
+    # Silenciar stdout (remover logs técnicos)
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+    
     try:
+        # Status: Buscando extratos
+        status_text.info("📡 Conectando à API e buscando extratos...")
+        progress_bar.progress(0.2)
+        
         # Chamar função main com lista de fundos e objetos datetime
         main(
             fundos=fundos_selecionados,
@@ -395,142 +399,81 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             gerar_pdf=gerar_pdf
         )
         
-        progress_bar.progress(0.8)
-        status_text.text("🔍 Buscando arquivos gerados...")
+        # Atualizar progresso: gerando arquivos
+        progress_bar.progress(0.6)
+        status_text.info("📄 Gerando arquivos Excel e PDF...")
         
-        # Forçar flush/sync dos arquivos antes de criar ZIP
-        import sys
-        sys.stdout.flush()
+        # Forçar flush/sync dos arquivos
         import time
-        time.sleep(0.5)  # Pequena pausa para garantir que arquivos foram escritos
+        time.sleep(1)  # Garantir que arquivos foram escritos
+        
+        # Status: Organizando arquivos
+        progress_bar.progress(0.8)
+        status_text.info("📂 Organizando arquivos gerados...")
         
         # Buscar arquivos gerados nos últimos 15 minutos
-        import glob
-        
-        # Debug: listar todos os arquivos no diretório
         todos_arquivos = os.listdir(pasta_saida)
-        arquivos_xlsx = [f for f in todos_arquivos if f.endswith('.xlsx')]
-        arquivos_pdf = [f for f in todos_arquivos if f.endswith('.pdf')]
         
-        print(f"\n🔍 DEBUG - Arquivos no diretório {pasta_saida}:")
-        print(f"   Excel encontrados: {len(arquivos_xlsx)}")
-        for f in arquivos_xlsx[:5]:  # Mostrar os 5 primeiros
-            print(f"      - {f}")
-        print(f"   PDF encontrados: {len(arquivos_pdf)}")
-        for f in arquivos_pdf[:5]:  # Mostrar os 5 primeiros
-            print(f"      - {f}")
-        
-        # Procurar TODOS os arquivos Excel gerados (novo padrão com nome do fundo)
-        # Padrão: exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx
-        for arquivo in arquivos_xlsx:
-            arquivo_completo = os.path.join(pasta_saida, arquivo)
-            if arquivo_completo not in arquivos_gerados:  # Evitar duplicatas
+        # Procurar arquivos Excel
+        for arquivo in todos_arquivos:
+            if arquivo.endswith('.xlsx') and arquivo.startswith('exportar-Santander'):
+                arquivo_completo = os.path.join(pasta_saida, arquivo)
                 if datetime.fromtimestamp(os.path.getmtime(arquivo_completo)) > timestamp_inicio:
                     arquivos_gerados.append(arquivo_completo)
-                    print(f"   ✅ Adicionado: {arquivo}")
         
-        # Procurar TODOS os arquivos PDF se solicitado
-        # Padrão: comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf
+        # Procurar arquivos PDF se solicitado
         if gerar_pdf:
-            for arquivo in arquivos_pdf:
-                arquivo_completo = os.path.join(pasta_saida, arquivo)
-                # Excluir exemplos ou arquivos antigos
-                if "(1).pdf" not in arquivo and arquivo_completo not in arquivos_gerados:
+            for arquivo in todos_arquivos:
+                if arquivo.endswith('.pdf') and arquivo.startswith('comprovante-ibe'):
+                    arquivo_completo = os.path.join(pasta_saida, arquivo)
                     if datetime.fromtimestamp(os.path.getmtime(arquivo_completo)) > timestamp_inicio:
                         arquivos_gerados.append(arquivo_completo)
-                        print(f"   ✅ Adicionado: {arquivo}")
         
         progress_bar.progress(1.0)
-        status_text.text("✅ Processamento concluído!")
         
-        # Debug: mostrar total de arquivos encontrados
-        print(f"\n📊 Total de arquivos detectados: {len(arquivos_gerados)}")
-        print(f"   - Excel: {len([f for f in arquivos_gerados if f.endswith('.xlsx')])}")
-        print(f"   - PDF: {len([f for f in arquivos_gerados if f.endswith('.pdf')])}")
-        
-        # Validar se há arquivos antes de continuar
+        # Mensagens de conclusão
         if len(arquivos_gerados) == 0:
-            # NÃO usar st.stop() aqui pois impede de mostrar os logs!
-            # Apenas definir uma flag para mostrar warning depois dos logs
-            nenhum_arquivo_gerado = True
+            status_text.warning("⚠️ Nenhum arquivo gerado")
+            st.warning("⚠️ Nenhum arquivo foi gerado. Verifique se os fundos selecionados têm contas cadastradas no período.")
         else:
-            nenhum_arquivo_gerado = False
+            status_text.success(f"✅ {len(arquivos_gerados)} arquivo(s) gerado(s) com sucesso!")
             
     except Exception as e:
         progress_bar.progress(1.0)
-        status_text.text("❌ Erro durante processamento")
+        status_text.error("❌ Erro durante processamento")
         st.error(f"❌ Erro: {str(e)}")
         import traceback
         with st.expander("🔴 Detalhes do erro"):
             st.code(traceback.format_exc())
     
     finally:
-        # Restaurar stdout e mostrar logs
+        # Restaurar stdout
         sys.stdout = old_stdout
-        log_text = log_output.getvalue()
-        
-        with log_container:
-            if log_text:
-                st.code(log_text, language="text")
-            else:
-                st.info("Nenhum log capturado")
         
         # Liberar estado de processamento
         st.session_state.processando = False
-        
-        # Mostrar warning DEPOIS dos logs se não há arquivos
-        if 'nenhum_arquivo_gerado' in locals() and nenhum_arquivo_gerado:
-            st.warning("⚠️ Nenhum arquivo foi gerado. Verifique se os fundos selecionados têm contas cadastradas.")
-            st.warning("📋 **Consulte os logs acima para entender o que aconteceu durante o processamento.**")
     
     # Mostrar resultados apenas se há arquivos gerados
-    if not ('nenhum_arquivo_gerado' in locals() and nenhum_arquivo_gerado):
+    if arquivos_gerados:
         st.markdown("---")
-        
-        if arquivos_gerados:
-            st.markdown('<div class="section-title">📥 Arquivos Gerados</div>', unsafe_allow_html=True)
-        
-        st.success(f"🎉 Total: {len(arquivos_gerados)} arquivo(s) gerado(s) com sucesso!")
-        
-        # Informação sobre fundos sem transações
-        if len(fundos_selecionados) > 1:
-            st.info("ℹ️ **Nota:** Fundos sem transações no período também tiveram arquivos gerados mostrando apenas os saldos atuais. Confira o resumo nos logs acima.")
+        st.markdown('<div class="section-title">📥 Arquivos Gerados</div>', unsafe_allow_html=True)
         
         # Agrupar por tipo
         excels = [f for f in arquivos_gerados if f.endswith('.xlsx')]
         pdfs = [f for f in arquivos_gerados if f.endswith('.pdf')]
         
+        # Resumo simples
+        st.success(f"✅ {len(excels)} planilha(s) Excel e {len(pdfs)} arquivo(s) PDF gerado(s)")
+        
         col1, col2 = st.columns(2)
         
         with col1:
             if excels:
-                st.markdown("**📊 Arquivos Excel:**")
-                # Mostrar apenas os primeiros 10, depois resumo
-                for arquivo in sorted(excels)[:10]:
-                    tamanho = os.path.getsize(arquivo) / 1024  # KB
-                    nome = os.path.basename(arquivo)
-                    # Encurtar nome se muito longo
-                    if len(nome) > 50:
-                        nome = nome[:47] + "..."
-                    st.markdown(f"- `{nome}` ({tamanho:.1f} KB)")
-                if len(excels) > 10:
-                    st.markdown(f"- ... e mais {len(excels) - 10} arquivo(s)")
+                st.markdown(f"**📊 Excel:** {len(excels)} arquivo(s)")
         
         with col2:
             if pdfs:
-                st.markdown("**📑 Arquivos PDF:**")
-                # Mostrar apenas os primeiros 10, depois resumo
-                for arquivo in sorted(pdfs)[:10]:
-                    tamanho = os.path.getsize(arquivo) / 1024  # KB
-                    nome = os.path.basename(arquivo)
-                    # Encurtar nome se muito longo
-                    if len(nome) > 50:
-                        nome = nome[:47] + "..."
-                    st.markdown(f"- `{nome}` ({tamanho:.1f} KB)")
-                if len(pdfs) > 10:
-                    st.markdown(f"- ... e mais {len(pdfs) - 10} arquivo(s)")
-        
-        st.info(f"📁 Diretório: `{os.path.dirname(arquivos_gerados[0])}`")
+                st.markdown(f"**📑 PDF:** {len(pdfs)} arquivo(s)")
         
         # Botão para baixar ZIP com todos os arquivos
         st.markdown("---")
@@ -607,12 +550,44 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             arquivos_por_fundo[fundo_id_curto].append(arquivo)
         
         print(f"\n📁 Fundos identificados: {len(arquivos_por_fundo)}")
-        for fundo in sorted(arquivos_por_fundo.keys()):
-            print(f"   - {fundo}: {len(arquivos_por_fundo[fundo])} arquivo(s)")
+        
+        # Criar mapeamento: nome_longo -> fundo_id (para nomes curtos nas pastas)
+        nome_para_id = {}
+        for fundo_id in fundos_selecionados:
+            if fundo_id in SANTANDER_FUNDOS:
+                nome_longo = SANTANDER_FUNDOS[fundo_id].get('nome', fundo_id)
+                nome_para_id[nome_longo] = fundo_id
+        
+        for arquivo in arquivos_gerados:
+            # Identificar fundo pelo nome do arquivo
+            nome = os.path.basename(arquivo)
+            
+            # Extrair nome do fundo do nome do arquivo
+            fundo_nome = "Sem_Fundo"  # Default
+            
+            # Padrão Excel: exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx
+            # Padrão PDF: comprovante-ibe-FUNDO-AGENCIA-CONTA.pdf
+            
+            if nome.startswith('exportar-Santander'):
+                # Excel: formato "exportar-Santander - Extrato DD de MMMM de YYYY-FUNDO-AGENCIA-CONTA.xlsx"
+                match = re.search(r'de \d{4}-(.+?)-\d{4}-\d+\.xlsx$', nome)
+                if match:
+                    fundo_nome_longo = match.group(1)
+                    # Converter nome longo para ID curto
+                    fundo_nome = nome_para_id.get(fundo_nome_longo, fundo_nome_longo)
+            elif nome.startswith('comprovante-ibe'):
+                # PDF: formato "comprovante-ibe-FUNDO-AGENCIA-CONTA.pdf"
+                match = re.search(r'comprovante-ibe-(.+?)-\d{4}-\d+', nome)
+                if match:
+                    fundo_nome_longo = match.group(1)
+                    fundo_nome = nome_para_id.get(fundo_nome_longo, fundo_nome_longo)
+            
+            # Adicionar ao dicionário
+            if fundo_nome not in arquivos_por_fundo:
+                arquivos_por_fundo[fundo_nome] = []
+            arquivos_por_fundo[fundo_nome].append(arquivo)
         
         # Criar ZIP com estrutura organizada: FUNDO/DATA/extrato.xlsx e extrato.pdf
-        print(f"\n📦 Criando ZIP organizado por fundo/data/conta...")
-        
         from zipfile import ZipFile, ZIP_STORED
         from io import BytesIO
         
@@ -625,13 +600,11 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                 
                 # Agrupar arquivos por fundo E conta
                 for fundo_id, arquivos in arquivos_por_fundo.items():
-                    # Usar o ID do fundo diretamente (já é curto: CONDOLIVRE FIDC, SEJA FIDC, 911 BANK, etc)
+                    # Usar o ID do fundo diretamente (já é curto)
                     fundo_safe = fundo_id.replace(' ', '_')
                     
                     # Período para subpasta - formato curto (DDMMAAAA_DDMMAAAA)
                     periodo_str = f"{data_inicial.strftime('%d%m%Y')}_{data_final.strftime('%d%m%Y')}"
-                    
-                    print(f"\n📂 Processando fundo: {fundo_safe}")
                     
                     # Agrupar arquivos por conta dentro do fundo
                     arquivos_por_conta = {}
@@ -651,7 +624,7 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                                     agencia = match.group(1)
                                     conta = match.group(2)
                             elif 'comprovante-ibe' in nome_original:
-                                # Formato: comprovante-ibe-FUNDO-AGENCIA-CONTA.pdf (pode ter UUID ou não)
+                                # Formato: comprovante-ibe-FUNDO-AGENCIA-CONTA.pdf
                                 match = re.search(r'-(\d{4})-(\d+)', nome_original)
                                 if match:
                                     agencia = match.group(1)
@@ -682,21 +655,16 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                             caminho_zip = f"{pasta_destino}/extrato.xlsx"
                             zip_file.write(arquivos_conta['excel'], caminho_zip)
                             contador += 1
-                            print(f"   ✅ {caminho_zip}")
                         
                         # Adicionar PDF
                         if arquivos_conta['pdf']:
                             caminho_zip = f"{pasta_destino}/extrato.pdf"
                             zip_file.write(arquivos_conta['pdf'], caminho_zip)
                             contador += 1
-                            print(f"   ✅ {caminho_zip}")
-            
-            print(f"\n✅ ZIP criado com {contador} arquivo(s) em {len(arquivos_por_fundo)} fundo(s)")
             
             # Obter bytes do ZIP
             zip_bytes = zip_buffer.getvalue()
             zip_size = len(zip_bytes)
-            print(f"📦 Tamanho do ZIP: {zip_size} bytes ({zip_size/1024/1024:.2f} MB)")
             
             # Nome do arquivo ZIP
             data_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -715,46 +683,11 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                     use_container_width=True
                 )
                 st.caption(f"💾 {len(arquivos_gerados)} arquivo(s) • {zip_size/1024/1024:.2f} MB")
-                st.success(f"""
-                📂 **Estrutura do ZIP:**
-                - `NOME_DO_FUNDO/DD-MM-AAAA_a_DD-MM-AAAA/extrato.xlsx`
-                - `NOME_DO_FUNDO/DD-MM-AAAA_a_DD-MM-AAAA/extrato.pdf`
-                
-                {f"- Se houver múltiplas contas: `NOME_DO_FUNDO/DATA/AGENCIA_CONTA/extrato.*`" if len(fundos_selecionados) > 1 else ""}
-                """)
             
         except Exception as e:
-            print(f"❌ ERRO ao criar ZIP: {e}")
-            import traceback
-            traceback.print_exc()
             st.error(f"Erro ao criar ZIP: {e}")
     else:
-        st.markdown('<div class="section-title">⚠️ Atenção</div>', unsafe_allow_html=True)
-        st.warning("Nenhum arquivo foi detectado como gerado recentemente.")
-        
-        # Debug: Mostrar todos os arquivos Excel e PDF no diretório
-        with st.expander("🔍 Debug - Arquivos no diretório"):
-            import glob
-            
-            st.markdown("**Arquivos Excel encontrados:**")
-            todos_excel = glob.glob(os.path.join(pasta_saida, "exportar-Santander*.xlsx"))
-            if todos_excel:
-                for arq in sorted(todos_excel)[-10:]:  # Últimos 10
-                    mtime = datetime.fromtimestamp(os.path.getmtime(arq))
-                    st.text(f"  {os.path.basename(arq)} - Modificado: {mtime.strftime('%d/%m/%Y %H:%M:%S')}")
-            else:
-                st.text("  Nenhum arquivo Excel encontrado")
-            
-            st.markdown("**Arquivos PDF encontrados:**")
-            todos_pdf = glob.glob(os.path.join(pasta_saida, "comprovante-ibe*.pdf"))
-            if todos_pdf:
-                for arq in sorted(todos_pdf)[-10:]:  # Últimos 10
-                    mtime = datetime.fromtimestamp(os.path.getmtime(arq))
-                    st.text(f"  {os.path.basename(arq)} - Modificado: {mtime.strftime('%d/%m/%Y %H:%M:%S')}")
-            else:
-                st.text("  Nenhum arquivo PDF encontrado")
-            
-            st.markdown(f"**Diretório de busca:** `{pasta_saida}`")
+        st.warning("⚠️ Nenhum arquivo foi gerado. Verifique os fundos selecionados.")
 
 # ========== INFORMAÇÕES E AJUDA ==========
 st.markdown("---")
