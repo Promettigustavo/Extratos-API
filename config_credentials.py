@@ -60,17 +60,18 @@ def get_fundos_config():
                 
                 fundos[key] = fundo_config
             
-            print(f"✅ {len(fundos)} fundos carregados dos secrets do Streamlit")
+            print(f"OK: {len(fundos)} fundos carregados dos secrets do Streamlit")
             return fundos
             
         except Exception as e:
-            print(f"⚠️ Erro ao carregar secrets: {e}")
-            print("📁 Tentando carregar credenciais locais...")
+            # Usar string ASCII para evitar problemas de encoding no terminal
+            print(f"Erro ao carregar secrets: {e}")
+            print("Tentando carregar credenciais locais...")
     
     # Fallback: carregar do arquivo local
     try:
         from credenciais_bancos import SANTANDER_FUNDOS
-        print(f"✅ {len(SANTANDER_FUNDOS)} fundos carregados do arquivo local")
+        print(f"OK: {len(SANTANDER_FUNDOS)} fundos carregados do arquivo local")
         return SANTANDER_FUNDOS
     except ImportError:
         raise Exception(

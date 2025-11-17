@@ -359,7 +359,7 @@ class SantanderExtratosBancarios:
         
         # Buscar todas as transações com paginação
         todas_transacoes = []
-        pagina = 1
+        offset = 0  # Índice inicial (não página)
         
         try:
             while True:
@@ -367,8 +367,10 @@ class SantanderExtratosBancarios:
                     "initialDate": data_inicial.strftime("%Y-%m-%d"),
                     "finalDate": data_final.strftime("%Y-%m-%d"),
                     "_limit": str(limite),
-                    "_offset": str(pagina)
+                    "_offset": str(offset)  # offset em registros, não páginas
                 }
+                
+                log(f"   🔍 Buscando: offset={offset}, limit={limite}")
                 
                 response = requests.get(
                     url,
@@ -381,9 +383,9 @@ class SantanderExtratosBancarios:
                 if response.status_code == 200:
                     data = response.json()
                     
-                    # DEBUG: Mostrar resposta completa na primeira página
-                    if pagina == 1:
-                        log(f"   📋 DEBUG - Resposta da API (página 1):")
+                    # DEBUG: Mostrar resposta completa na primeira requisição
+                    if offset == 0:
+                        log(f"   📋 DEBUG - Resposta da API (offset 0):")
                         log(f"   Keys disponíveis: {list(data.keys())}")
                         log(f"   Resposta completa: {str(data)[:1000]}")
                     
@@ -391,24 +393,32 @@ class SantanderExtratosBancarios:
                     
                     if not transacoes_pagina:
                         # Não há mais transações
-                        log(f"   ⚠️ Página {pagina} retornou 0 transações. Encerrando busca.")
+                        log(f"   ⚠️ Offset {offset} retornou 0 transações. Encerrando busca.")
                         break
                     
                     todas_transacoes.extend(transacoes_pagina)
-                    log(f"   Página {pagina}: {len(transacoes_pagina)} transações | Total: {len(todas_transacoes)}")
+                    pagina_num = (offset // limite) + 1
+                    log(f"   Página {pagina_num} (offset {offset}): {len(transacoes_pagina)} transações | Total: {len(todas_transacoes)}")
                     
                     # DEBUG: Mostrar primeira transação
-                    if pagina == 1 and len(transacoes_pagina) > 0:
+                    if offset == 0 and len(transacoes_pagina) > 0:
                         log(f"   📋 Exemplo de transação: {transacoes_pagina[0]}")
                     
                     # Verificar se há próxima página
                     links = data.get("_links", {})
                     if "next" not in links:
+                        log(f"   ✅ Última página alcançada (sem link 'next')")
                         break
                     
-                    pagina += 1
+                    # Incrementar offset pelo número de registros, não por 1
+                    offset += limite
+                    
+                    # Segurança: evitar loop infinito
+                    if offset > 100000:  # Limite de segurança: 100k transações
+                        log(f"   ⚠️ Limite de segurança atingido (100k transações)")
+                        break
                 else:
-                    log(f"❌ Erro ao buscar transações (página {pagina}): {response.status_code}")
+                    log(f"❌ Erro ao buscar transações (offset {offset}): {response.status_code}")
                     log(f"   Resposta: {response.text[:500]}")
                     break
             
