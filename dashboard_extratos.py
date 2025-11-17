@@ -1,6 +1,7 @@
 """
-Dashboard Streamlit para Busca de Extratos Bancários Santander
+Dashboard Streamlit para Busca de Extratos Bancários
 Identidade Visual: Kanastra
+Bancos suportados: Santander (Itaú e Arbi em desenvolvimento)
 """
 
 import streamlit as st
@@ -13,7 +14,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # Configuração da página
 st.set_page_config(
-    page_title="Extratos Bancários Santander - Kanastra",
+    page_title="Extratos Bancários - Kanastra",
     page_icon="https://www.kanastra.design/symbol.svg",
     layout="wide"
 )
@@ -141,6 +142,19 @@ st.markdown("""
     [data-testid="stMetricValue"] {
         color: #14735a;
     }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #f3f2f3;
+    }
+    [data-testid="stSidebar"] h3 {
+        color: #193c32;
+        font-weight: 700;
+    }
+    [data-testid="stSidebar"] .stRadio > label {
+        color: #193c32;
+        font-weight: 600;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -149,8 +163,28 @@ col_logo, col_title = st.columns([1, 6])
 with col_logo:
     st.image("https://www.kanastra.design/symbol-green.svg", width=100)
 with col_title:
-    st.markdown('<div class="main-header">Extratos Bancários Santander</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">Extratos Bancários</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Geração automatizada de extratos em formato Excel e PDF</div>', unsafe_allow_html=True)
+
+# ========== SIDEBAR: SELEÇÃO DE BANCO ==========
+with st.sidebar:
+    st.markdown("### 🏦 Banco")
+    banco_selecionado = st.radio(
+        "Selecione o banco:",
+        ["Santander", "Itaú (em breve)", "Arbi (em breve)"],
+        index=0,
+        help="Atualmente disponível apenas Santander. Outros bancos em desenvolvimento."
+    )
+    
+    # Desabilitar bancos não implementados
+    if banco_selecionado != "Santander":
+        st.warning("⚠️ Este banco ainda não está disponível. Use Santander por enquanto.")
+        st.stop()
+    
+    st.markdown("---")
+    st.markdown("**Banco ativo:** Santander")
+    st.markdown("**API:** Open Banking")
+    st.markdown("**Formatos:** Excel + PDF")
 
 # Import condicional - suporta tanto ambiente local quanto Streamlit Cloud
 try:
@@ -647,7 +681,7 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
             # Nome do arquivo ZIP
             data_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
             periodo_str = f"{data_inicial.strftime('%d-%m-%Y')}_a_{data_final.strftime('%d-%m-%Y')}"
-            nome_zip = f"extratos_santander_{periodo_str}_{data_hora}.zip"
+            nome_zip = f"extratos_bancarios_{periodo_str}_{data_hora}.zip"
             
             # Botão de download
             st.markdown("---")
