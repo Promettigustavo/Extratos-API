@@ -525,9 +525,9 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
                 else:
                     print(f"   ⚠️ Não conseguiu extrair fundo do Excel: {nome}")
             elif nome.startswith('comprovante-ibe'):
-                # PDF: formato "comprovante-ibe-FUNDO-AGENCIA-CONTA-UUID.pdf"
-                # UUID pode ter maiúsculas, minúsculas e hífens
-                match = re.search(r'comprovante-ibe-(.+?)-\d{4}-\d+-[A-Fa-f0-9\-]+\.pdf$', nome, re.IGNORECASE)
+                # PDF: formato "comprovante-ibe-FUNDO-AGENCIA-CONTA.pdf"
+                # Extrair tudo entre "comprovante-ibe-" e "-AGENCIA-CONTA.pdf"
+                match = re.search(r'comprovante-ibe-(.+?)-\d{4}-\d+\.pdf$', nome)
                 if match:
                     fundo_nome = match.group(1).strip()
                 else:
