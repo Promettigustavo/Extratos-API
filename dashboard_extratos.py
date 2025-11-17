@@ -266,13 +266,16 @@ col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
     preset_periodo = st.selectbox(
         "Período pré-definido:",
-        ["Últimos 7 dias", "Últimos 15 dias", "Últimos 30 dias", "Mês atual", "Mês anterior", "Último ano", "Últimos 2 anos", "Personalizado"],
+        ["Últimos 3 dias", "Últimos 7 dias", "Últimos 15 dias", "Últimos 30 dias", "Mês atual", "Mês anterior", "Último ano", "Últimos 2 anos", "Personalizado"],
         help="Escolha um período pré-definido ou selecione 'Personalizado' para definir datas específicas"
     )
 
 # Calcular datas baseado no preset
 hoje = datetime.now().date()
-if preset_periodo == "Últimos 7 dias":
+if preset_periodo == "Últimos 3 dias":
+    data_inicial_default = hoje - timedelta(days=3)
+    data_final_default = hoje
+elif preset_periodo == "Últimos 7 dias":
     data_inicial_default = hoje - timedelta(days=7)
     data_final_default = hoje
 elif preset_periodo == "Últimos 15 dias":
