@@ -2,12 +2,14 @@
 Dashboard Streamlit para Busca de Extratos Bancários
 Identidade Visual: Kanastra
 Bancos suportados: Santander (Itaú e Arbi em desenvolvimento)
+Acesso restrito: apenas e-mails @kanastra.com.br ou @liminedtvm.com
 """
 
 import streamlit as st
 from datetime import datetime, timedelta
 import os
 import sys
+import re
 
 # Adicionar diretório ao path para imports
 sys.path.insert(0, os.path.dirname(__file__))
@@ -18,6 +20,53 @@ st.set_page_config(
     page_icon="https://www.kanastra.design/symbol.svg",
     layout="wide"
 )
+
+# ========== AUTENTICAÇÃO POR E-MAIL ==========
+DOMINIOS_PERMITIDOS = ["@kanastra.com.br", "@liminedtvm.com"]
+
+def verificar_email(email):
+    """Verifica se o e-mail pertence aos domínios permitidos"""
+    if not email:
+        return False
+    email = email.lower().strip()
+    return any(email.endswith(dominio) for dominio in DOMINIOS_PERMITIDOS)
+
+def tela_login():
+    """Exibe tela de login com restrição de domínio"""
+    st.markdown('<div class="main-header" style="text-align: center;">🔐 Acesso Restrito</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header" style="text-align: center;">Extratos Bancários - Kanastra</div>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.info("🔒 **Acesso permitido apenas para:**\n- E-mails @kanastra.com.br\n- E-mails @liminedtvm.com")
+        
+        with st.form("login_form"):
+            email = st.text_input("📧 E-mail corporativo:", placeholder="seu.nome@kanastra.com.br")
+            submitted = st.form_submit_button("🔓 Acessar Sistema", use_container_width=True)
+            
+            if submitted:
+                if verificar_email(email):
+                    st.session_state.autenticado = True
+                    st.session_state.usuario_email = email
+                    st.success(f"✅ Acesso autorizado para {email}")
+                    st.rerun()
+                else:
+                    st.error("❌ Acesso negado! Use um e-mail corporativo válido (@kanastra.com.br ou @liminedtvm.com)")
+        
+        st.markdown("---")
+        st.caption("🛡️ Sistema de extratos bancários protegido | Kanastra © 2025")
+    
+    st.stop()
+
+# Verificar autenticação
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+    tela_login()
 
 # CSS customizado - Kanastra Brand
 st.markdown("""
@@ -182,12 +231,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header com logo Kanastra
-col_logo, col_title = st.columns([1, 6])
+col_logo, col_title, col_logout = st.columns([1, 5, 1])
 with col_logo:
     st.image("https://www.kanastra.design/symbol-green.svg", width=100)
 with col_title:
     st.markdown('<div class="main-header">Extratos Bancários</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Geração automatizada de extratos em formato Excel e PDF</div>', unsafe_allow_html=True)
+with col_logout:
+    st.write("")  # Espaço
+    st.caption(f"👤 {st.session_state.usuario_email.split('@')[0]}")
+    if st.button("🚪 Sair", use_container_width=True):
+        st.session_state.autenticado = False
+        st.session_state.usuario_email = None
+        st.rerun()
 
 # ========== SIDEBAR: SELEÇÃO DE BANCO ==========
 with st.sidebar:
