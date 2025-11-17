@@ -155,6 +155,28 @@ st.markdown("""
         color: #193c32;
         font-weight: 600;
     }
+    
+    /* Cards de banco na sidebar */
+    .banco-card {
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 8px;
+        border: 2px solid #2daa82;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .banco-card.selected {
+        background-color: #2daa82;
+        color: white;
+        font-weight: bold;
+    }
+    .banco-card.disabled {
+        border-color: #ccc;
+        background-color: #f5f5f5;
+        color: #999;
+        cursor: not-allowed;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -168,21 +190,37 @@ with col_title:
 
 # ========== SIDEBAR: SELEÇÃO DE BANCO ==========
 with st.sidebar:
-    st.markdown("### 🏦 Banco")
+    st.markdown("### 🏦 Selecione o Banco")
     
-    # Usar selectbox ao invés de radio para visual mais limpo
-    banco_selecionado = st.selectbox(
-        "Banco:",
-        ["Santander"],
-        index=0,
-        help="Sistema de extratos bancários via Open Banking"
-    )
+    # Card para Santander (ativo)
+    st.markdown("""
+    <div class="banco-card selected">
+        <h4 style="margin: 0; color: white;">🟢 Santander</h4>
+        <small>Open Banking • OAuth2 + mTLS</small>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    banco_selecionado = "Santander"
+    
+    # Placeholder para futuros bancos (desabilitados)
+    st.markdown("""
+    <div class="banco-card disabled">
+        <h4 style="margin: 0; color: #999;">⚪ Itaú</h4>
+        <small style="color: #999;">Em breve</small>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="banco-card disabled">
+        <h4 style="margin: 0; color: #999;">⚪ Arbi</h4>
+        <small style="color: #999;">Em breve</small>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.markdown("**📊 Informações**")
-    st.markdown("• API: Open Banking")
-    st.markdown("• Formatos: Excel + PDF")
-    st.markdown("• Autenticação: OAuth2 + mTLS")
+    st.markdown("**📊 Formatos de Saída**")
+    st.markdown("• Excel (.xlsx)")
+    st.markdown("• PDF (.pdf)")
 
 # Import condicional - suporta tanto ambiente local quanto Streamlit Cloud
 try:
