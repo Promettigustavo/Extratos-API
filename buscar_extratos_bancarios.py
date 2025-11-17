@@ -428,8 +428,13 @@ class SantanderExtratosBancarios:
         
         print(f"\n💰 Buscando saldo da conta {branch_code}.{account_number}...")
         
-        # Usar endpoint de balances com account_id no formato agencia.conta
-        account_id = f"{branch_code}.{account_number}"
+        # Formatar account_id conforme API: AAAA.CCCCCCCCCCCC (4 dígitos agência + 12 dígitos conta)
+        branch_formatted = str(branch_code).zfill(4)
+        account_formatted = str(account_number).zfill(12)
+        account_id = f"{branch_formatted}.{account_formatted}"
+        
+        print(f"   🔢 Account ID formatado: {account_id}")
+        
         url = f"https://trust-open.api.santander.com.br/bank_account_information/v1/banks/{BANK_ID}/balances/{account_id}"
         
         headers = {
