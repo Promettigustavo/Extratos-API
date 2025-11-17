@@ -815,13 +815,9 @@ class SantanderExtratosBancarios:
                     pass
             
             if data_inicial and data_final:
-                # Usar datas solicitadas pelo usuário
-                try:
-                    periodo_inicio = data_inicial.strftime('%a %b %d 00:00:00 GMT-03:00 %Y')
-                    periodo_fim = data_final.strftime('%a %b %d 23:59:59 GMT-03:00 %Y')
-                except:
-                    periodo_inicio = data_inicial.strftime('%d/%m/%Y')
-                    periodo_fim = data_final.strftime('%d/%m/%Y')
+                # Usar datas solicitadas pelo usuário em formato simples
+                periodo_inicio = data_inicial.strftime('%d/%m/%Y')
+                periodo_fim = data_final.strftime('%d/%m/%Y')
             elif transacoes:
                 # Fallback: usar primeira e última transação
                 primeira_trans = transacoes[0].get('transactionDate', '')
