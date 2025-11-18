@@ -538,7 +538,6 @@ class SantanderExtratosBancarios:
             pasta_saida = os.getcwd()
         
         # Nome do arquivo no formato: exportar-Santander - Extrato DD de MMMM de YYYY-AGENCIA-CONTA.xlsx
-        from datetime import datetime
         import locale
         try:
             locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
@@ -573,7 +572,6 @@ class SantanderExtratosBancarios:
         
         # Ordenar transações: mais antiga primeiro (2024 antes 2025), ordem Santander dentro do dia
         from itertools import groupby
-        from datetime import datetime
         
         # Função para extrair data como datetime para ordenação cronológica real
         def extrair_data_ordenacao(trans):
@@ -919,7 +917,6 @@ class SantanderExtratosBancarios:
             
             # Ordenar transações: mais antiga primeiro (2024 antes 2025), ordem Santander dentro do dia
             from itertools import groupby
-            from datetime import datetime
             
             # Função para extrair data como datetime para ordenação cronológica real
             def extrair_data_ordenacao(trans):
