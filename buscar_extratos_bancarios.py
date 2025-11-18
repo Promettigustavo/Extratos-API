@@ -576,12 +576,17 @@ class SantanderExtratosBancarios:
             data = trans.get('transactionDate', '')
             if data and len(data) >= 10:
                 try:
-                    # Converte para datetime para ordenação cronológica real
-                    dt = datetime.strptime(data[:10], '%Y-%m-%d')
+                    # API retorna DD/MM/YYYY
+                    dt = datetime.strptime(data[:10], '%d/%m/%Y')
                     return dt
                 except:
-                    # Fallback: data muito no futuro para datas inválidas
-                    return datetime(9999, 12, 31)
+                    try:
+                        # Fallback: tentar YYYY-MM-DD
+                        dt = datetime.strptime(data[:10], '%Y-%m-%d')
+                        return dt
+                    except:
+                        # Fallback: data muito no futuro para datas inválidas
+                        return datetime(9999, 12, 31)
             return datetime(9999, 12, 31)
         
         # Ordenar cronologicamente (mais antigo primeiro) - ORDEM CORRETA
@@ -925,12 +930,17 @@ class SantanderExtratosBancarios:
                 data = trans.get('transactionDate', '')
                 if data and len(data) >= 10:
                     try:
-                        # Converte para datetime para ordenação cronológica real
-                        dt = datetime.strptime(data[:10], '%Y-%m-%d')
+                        # API retorna DD/MM/YYYY
+                        dt = datetime.strptime(data[:10], '%d/%m/%Y')
                         return dt
                     except:
-                        # Fallback: data muito no futuro para datas inválidas
-                        return datetime(9999, 12, 31)
+                        try:
+                            # Fallback: tentar YYYY-MM-DD
+                            dt = datetime.strptime(data[:10], '%Y-%m-%d')
+                            return dt
+                        except:
+                            # Fallback: data muito no futuro para datas inválidas
+                            return datetime(9999, 12, 31)
                 return datetime(9999, 12, 31)
             
             # Ordenar cronologicamente (mais antigo primeiro) - ORDEM CORRETA
