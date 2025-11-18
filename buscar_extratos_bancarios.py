@@ -872,7 +872,8 @@ class SantanderExtratosBancarios:
                     saldo_fmt = f"-{saldo_fmt}"
             
             # Ordenar transações da mais antiga para a mais recente
-            transacoes_ordenadas = sorted(transacoes, key=lambda x: x.get('transactionDate', ''))
+            # Usa data como critério primário e transactionId como secundário
+            transacoes_ordenadas = sorted(transacoes, key=lambda x: (x.get('transactionDate', ''), x.get('transactionId', '')))
             log(f"   📋 Transações ordenadas cronologicamente (mais antiga primeiro)")
             
             # Saldo anterior
