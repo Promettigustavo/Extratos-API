@@ -570,7 +570,7 @@ class SantanderExtratosBancarios:
         # Linha 3: Headers das colunas
         dados.append(['Data', None, 'Histórico', 'Documento', 'Valor (R$)', 'Saldo (R$)'])
         
-        # Ordenar transações: mais antiga primeiro (2024 antes 2025), ordem Santander dentro do dia
+        # Ordenar transações: dias mais antigos primeiro, mais recentes no final
         from itertools import groupby
         
         # Função para extrair data como datetime para ordenação cronológica real
@@ -597,7 +597,7 @@ class SantanderExtratosBancarios:
             transacoes_do_dia.reverse()  # Última transação do dia primeiro
             transacoes_ordenadas.extend(transacoes_do_dia)
         
-        log(f"   📋 Transações ordenadas cronologicamente: mais antiga primeiro")
+        log(f"   📋 Transações ordenadas: dias mais antigos primeiro, mais recentes no final")
         
         # Calcular saldo anterior (saldo atual - todas as transações do período)
         saldo_atual = 0
@@ -915,7 +915,7 @@ class SantanderExtratosBancarios:
                 saldo_atual = float(saldo_info.get('availableAmount', 0))
                 log(f"   💰 Saldo atual (API): R$ {saldo_atual:,.2f}")
             
-            # Ordenar transações: mais antiga primeiro (2024 antes 2025), ordem Santander dentro do dia
+            # Ordenar transações: dias mais antigos primeiro, mais recentes no final
             from itertools import groupby
             
             # Função para extrair data como datetime para ordenação cronológica real
@@ -942,7 +942,7 @@ class SantanderExtratosBancarios:
                 transacoes_do_dia.reverse()  # Última transação do dia primeiro
                 transacoes_ordenadas.extend(transacoes_do_dia)
             
-            log(f"   📋 Transações ordenadas cronologicamente: mais antiga primeiro")
+            log(f"   📋 Transações ordenadas: dias mais antigos primeiro, mais recentes no final")
             
             # Somar todas as transações do período para calcular o saldo anterior
             total_transacoes = 0
