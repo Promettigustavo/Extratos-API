@@ -587,6 +587,12 @@ class SantanderExtratosBancarios:
         # Ordenar cronologicamente (mais antigo primeiro) - ORDEM CORRETA
         transacoes_ordenadas = sorted(transacoes, key=extrair_data_ordenacao)
         
+        # DEBUG: Verificar ordem
+        if transacoes_ordenadas:
+            primeira = transacoes_ordenadas[0].get('transactionDate', '')
+            ultima = transacoes_ordenadas[-1].get('transactionDate', '')
+            log(f"   📋 DEBUG: Primeira transação = {primeira}, Última = {ultima}")
+        
         log(f"   📋 Transações ordenadas: dias mais antigos primeiro, mais recentes no final")
         
         # Calcular saldo anterior (saldo atual - todas as transações do período)
@@ -922,6 +928,12 @@ class SantanderExtratosBancarios:
             
             # Ordenar cronologicamente (mais antigo primeiro) - ORDEM CORRETA
             transacoes_ordenadas = sorted(transacoes, key=extrair_data_ordenacao)
+            
+            # DEBUG: Verificar ordem
+            if transacoes_ordenadas:
+                primeira = transacoes_ordenadas[0].get('transactionDate', '')
+                ultima = transacoes_ordenadas[-1].get('transactionDate', '')
+                log(f"   📋 DEBUG PDF: Primeira transação = {primeira}, Última = {ultima}")
             
             log(f"   📋 Transações ordenadas: dias mais antigos primeiro, mais recentes no final")
             
