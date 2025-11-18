@@ -571,8 +571,11 @@ class SantanderExtratosBancarios:
         # Linha 3: Headers das colunas
         dados.append(['Data', None, 'Histórico', 'Documento', 'Valor (R$)', 'Saldo (R$)'])
         
-        # Ordenar transações da mais antiga para a mais recente
-        transacoes_ordenadas = sorted(transacoes, key=lambda x: x.get('transactionDate', ''))
+        # Ordenar transações: data crescente, mas dentro do mesmo dia ordem reversa (como banco)
+        # Usa índice negativo para reverter ordem dentro do mesmo dia
+        transacoes_com_indice = [(i, t) for i, t in enumerate(transacoes)]
+        transacoes_ordenadas = [t for i, t in sorted(transacoes_com_indice, key=lambda x: (x[1].get('transactionDate', ''), -x[0]))]
+        log(f"   📋 Transações ordenadas cronologicamente (mais antiga primeiro, ordem reversa no mesmo dia)")
         
         # Calcular saldo anterior (saldo atual - todas as transações do período)
         saldo_atual = 0
@@ -890,10 +893,11 @@ class SantanderExtratosBancarios:
                 saldo_atual = float(saldo_info.get('availableAmount', 0))
                 log(f"   💰 Saldo atual (API): R$ {saldo_atual:,.2f}")
             
-            # Ordenar transações da mais antiga para a mais recente
-            # Usa data como critério primário e transactionId como secundário
-            transacoes_ordenadas = sorted(transacoes, key=lambda x: (x.get('transactionDate', ''), x.get('transactionId', '')))
-            log(f"   📋 Transações ordenadas cronologicamente (mais antiga primeiro)")
+            # Ordenar transações: data crescente, mas dentro do mesmo dia ordem reversa (como banco)
+            # Usa índice negativo para reverter ordem dentro do mesmo dia
+            transacoes_com_indice = [(i, t) for i, t in enumerate(transacoes)]
+            transacoes_ordenadas = [t for i, t in sorted(transacoes_com_indice, key=lambda x: (x[1].get('transactionDate', ''), -x[0]))]
+            log(f"   📋 Transações ordenadas cronologicamente (mais antiga primeiro, ordem reversa no mesmo dia)")
             
             # Somar todas as transações do período para calcular o saldo anterior
             total_transacoes = 0
