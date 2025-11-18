@@ -627,6 +627,13 @@ class SantanderExtratosBancarios:
         # Debug: mostrar se há transações
         log(f"📝 Processando {len(transacoes_ordenadas)} transações para Excel (ordenadas da mais antiga para mais recente)...")
         
+        # DEBUG: Mostrar primeira e última transação que será escrita no Excel
+        if transacoes_ordenadas:
+            primeira_trans = transacoes_ordenadas[0]
+            ultima_trans = transacoes_ordenadas[-1]
+            log(f"   📅 PRIMEIRA transação no Excel: {primeira_trans.get('transactionDate', '')} - {primeira_trans.get('transactionName', '')[:50]}")
+            log(f"   📅 ÚLTIMA transação no Excel: {ultima_trans.get('transactionDate', '')} - {ultima_trans.get('transactionName', '')[:50]}")
+        
         # Adicionar transações
         for trans in transacoes_ordenadas:
             data = trans.get('transactionDate', '')
