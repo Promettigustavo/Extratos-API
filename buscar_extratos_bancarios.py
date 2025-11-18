@@ -571,33 +571,35 @@ class SantanderExtratosBancarios:
         # Linha 3: Headers das colunas
         dados.append(['Data', None, 'Histórico', 'Documento', 'Valor (R$)', 'Saldo (R$)'])
         
-        # Ordenar transações: anos separados, dias crescentes, ordem Santander dentro do dia
+        # Ordenar transações: mais antiga primeiro (2024 antes 2025), ordem Santander dentro do dia
         from itertools import groupby
+        from datetime import datetime
         
-        # Primeiro: ordenar por ANO + DATA para evitar mistura de anos
-        def extrair_ano_data_key(trans):
+        # Função para extrair data como datetime para ordenação cronológica real
+        def extrair_data_ordenacao(trans):
             data = trans.get('transactionDate', '')
             if data and len(data) >= 10:
                 try:
-                    # Retorna tupla (ano, data_completa) para ordenação hierárquica
-                    ano = data[:4]  # '2024' ou '2025'
-                    return (ano, data)
+                    # Converte para datetime para ordenação cronológica real
+                    dt = datetime.strptime(data[:10], '%Y-%m-%d')
+                    return dt
                 except:
-                    return ('9999', data)  # Fallback para datas inválidas
-            return ('9999', data)
+                    # Fallback: data muito no futuro para datas inválidas
+                    return datetime(9999, 12, 31)
+            return datetime(9999, 12, 31)
         
-        # Ordenar por ano primeiro, depois por data
-        transacoes_por_ano_data = sorted(transacoes, key=extrair_ano_data_key)
+        # Ordenar cronologicamente (mais antigo primeiro)
+        transacoes_cronologicas = sorted(transacoes, key=extrair_data_ordenacao)
         
-        # Agrupar por data e reverter ordem dentro de cada grupo
+        # Agrupar por data e reverter ordem dentro de cada grupo (match Santander)
         transacoes_ordenadas = []
-        for data, grupo in groupby(transacoes_por_ano_data, key=lambda x: x.get('transactionDate', '')):
+        for data, grupo in groupby(transacoes_cronologicas, key=lambda x: x.get('transactionDate', '')):
             # Converter grupo em lista e reverter (para match com extrato Santander)
             transacoes_do_dia = list(grupo)
             transacoes_do_dia.reverse()  # Última transação do dia primeiro
             transacoes_ordenadas.extend(transacoes_do_dia)
         
-        log(f"   📋 Transações ordenadas: anos separados, dias crescentes, ordem Santander")
+        log(f"   📋 Transações ordenadas cronologicamente: mais antiga primeiro")
         
         # Calcular saldo anterior (saldo atual - todas as transações do período)
         saldo_atual = 0
@@ -915,33 +917,35 @@ class SantanderExtratosBancarios:
                 saldo_atual = float(saldo_info.get('availableAmount', 0))
                 log(f"   💰 Saldo atual (API): R$ {saldo_atual:,.2f}")
             
-            # Ordenar transações: anos separados, dias crescentes, ordem Santander dentro do dia
+            # Ordenar transações: mais antiga primeiro (2024 antes 2025), ordem Santander dentro do dia
             from itertools import groupby
+            from datetime import datetime
             
-            # Primeiro: ordenar por ANO + DATA para evitar mistura de anos
-            def extrair_ano_data_key(trans):
+            # Função para extrair data como datetime para ordenação cronológica real
+            def extrair_data_ordenacao(trans):
                 data = trans.get('transactionDate', '')
                 if data and len(data) >= 10:
                     try:
-                        # Retorna tupla (ano, data_completa) para ordenação hierárquica
-                        ano = data[:4]  # '2024' ou '2025'
-                        return (ano, data)
+                        # Converte para datetime para ordenação cronológica real
+                        dt = datetime.strptime(data[:10], '%Y-%m-%d')
+                        return dt
                     except:
-                        return ('9999', data)  # Fallback para datas inválidas
-                return ('9999', data)
+                        # Fallback: data muito no futuro para datas inválidas
+                        return datetime(9999, 12, 31)
+                return datetime(9999, 12, 31)
             
-            # Ordenar por ano primeiro, depois por data
-            transacoes_por_ano_data = sorted(transacoes, key=extrair_ano_data_key)
+            # Ordenar cronologicamente (mais antigo primeiro)
+            transacoes_cronologicas = sorted(transacoes, key=extrair_data_ordenacao)
             
-            # Agrupar por data e reverter ordem dentro de cada grupo
+            # Agrupar por data e reverter ordem dentro de cada grupo (match Santander)
             transacoes_ordenadas = []
-            for data, grupo in groupby(transacoes_por_ano_data, key=lambda x: x.get('transactionDate', '')):
+            for data, grupo in groupby(transacoes_cronologicas, key=lambda x: x.get('transactionDate', '')):
                 # Converter grupo em lista e reverter (para match com extrato Santander)
                 transacoes_do_dia = list(grupo)
                 transacoes_do_dia.reverse()  # Última transação do dia primeiro
                 transacoes_ordenadas.extend(transacoes_do_dia)
             
-            log(f"   📋 Transações ordenadas: anos separados, dias crescentes, ordem Santander")
+            log(f"   📋 Transações ordenadas cronologicamente: mais antiga primeiro")
             
             # Somar todas as transações do período para calcular o saldo anterior
             total_transacoes = 0
