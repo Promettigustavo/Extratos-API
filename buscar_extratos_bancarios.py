@@ -571,19 +571,22 @@ class SantanderExtratosBancarios:
         # Linha 3: Headers das colunas
         dados.append(['Data', None, 'Histórico', 'Documento', 'Valor (R$)', 'Saldo (R$)'])
         
+        # Ordenar transações da mais antiga para a mais recente
+        transacoes_ordenadas = sorted(transacoes, key=lambda x: x.get('transactionDate', ''))
+        
         # Calcular saldo inicial e processar transações
         saldo = 0
         
         # Adicionar linha de saldo anterior
-        if transacoes:
-            primeira_data = transacoes[0].get('transactionDate', '')
+        if transacoes_ordenadas:
+            primeira_data = transacoes_ordenadas[0].get('transactionDate', '')
             dados.append([primeira_data, None, 'SALDO ANTERIOR', None, None, saldo])
         
         # Debug: mostrar se há transações
-        log(f"📝 Processando {len(transacoes)} transações para Excel...")
+        log(f"📝 Processando {len(transacoes_ordenadas)} transações para Excel (ordenadas da mais antiga para mais recente)...")
         
         # Adicionar transações
-        for trans in transacoes:
+        for trans in transacoes_ordenadas:
             data = trans.get('transactionDate', '')
             historico = trans.get('transactionName', '')
             documento = trans.get('documentNumber', '')
@@ -868,9 +871,13 @@ class SantanderExtratosBancarios:
                 if saldo < 0:
                     saldo_fmt = f"-{saldo_fmt}"
             
+            # Ordenar transações da mais antiga para a mais recente
+            transacoes_ordenadas = sorted(transacoes, key=lambda x: x.get('transactionDate', ''))
+            log(f"   📋 Transações ordenadas cronologicamente (mais antiga primeiro)")
+            
             # Saldo anterior
-            if transacoes and len(transacoes) > 0:
-                primeira_data = transacoes[0].get('transactionDate', '')
+            if transacoes_ordenadas and len(transacoes_ordenadas) > 0:
+                primeira_data = transacoes_ordenadas[0].get('transactionDate', '')
                 if primeira_data and len(primeira_data) >= 10:
                     try:
                         data_obj = datetime.strptime(primeira_data[:10], '%Y-%m-%d')
@@ -885,7 +892,7 @@ class SantanderExtratosBancarios:
                 table_data.append([data_hoje, '', 'SALDO ATUAL', '', '', saldo_fmt])
             
             # Transações
-            for trans in transacoes:
+            for trans in transacoes_ordenadas:
                 data = trans.get('transactionDate', '')
                 historico = trans.get('transactionName', '')
                 documento = trans.get('documentNumber', '')
