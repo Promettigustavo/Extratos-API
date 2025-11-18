@@ -19,7 +19,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# CSS customizado - Kanastra Brand
+# CSS customizado - Kanastra Brand (Visual Moderno)
 st.markdown("""
 <style>
     /* Cores Kanastra */
@@ -28,7 +28,13 @@ st.markdown("""
         --tech-green-1: #1e5546;
         --tech-green-2: #14735a;
         --tech-green-3: #2daa82;
-        --light-gray: #f3f2f3;
+        --light-gray: #f8f9fa;
+        --white: #ffffff;
+    }
+    
+    /* Background geral */
+    .main {
+        background: #ffffff;
     }
     
     /* Headers */
@@ -38,6 +44,7 @@ st.markdown("""
         color: #193c32;
         margin-bottom: 0.5rem;
         font-family: 'Inter', sans-serif;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
     }
     .sub-header {
         font-size: 1.3rem;
@@ -46,106 +53,149 @@ st.markdown("""
         font-weight: 400;
     }
     
-    /* Seções */
+    /* Seções com cards modernos */
     .section-title {
         font-size: 1.5rem;
         font-weight: 600;
         color: #193c32;
         margin-top: 2rem;
         margin-bottom: 1rem;
-        border-bottom: 3px solid #2daa82;
-        padding-bottom: 0.5rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, #14735a 0%, #2daa82 100%);
+        color: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(20, 115, 90, 0.2);
     }
     
-    /* Botões */
+    /* Botões modernos com gradiente */
     .stButton>button {
-        background-color: #14735a !important;
+        background: linear-gradient(135deg, #14735a 0%, #2daa82 100%) !important;
         color: white !important;
         font-weight: bold !important;
-        border-radius: 8px !important;
+        border-radius: 12px !important;
         padding: 0.75rem 2rem !important;
         border: none !important;
         transition: all 0.3s ease !important;
         font-size: 1.1rem !important;
+        box-shadow: 0 4px 12px rgba(20, 115, 90, 0.25) !important;
     }
     .stButton>button:hover {
-        background-color: #2daa82 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(20, 115, 90, 0.4) !important;
+        background: linear-gradient(135deg, #2daa82 0%, #14735a 100%) !important;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(20, 115, 90, 0.4) !important;
+    }
+    .stButton>button:active {
+        transform: translateY(-1px);
     }
     
-    /* Success/Info boxes */
+    /* Success/Info boxes com sombra */
     .success-box {
-        padding: 1rem;
-        border-radius: 8px;
-        background-color: #d4edda;
-        border-left: 5px solid #2daa82;
+        padding: 1.25rem;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border: none;
         margin: 1rem 0;
         color: #193c32;
+        box-shadow: 0 3px 10px rgba(45, 170, 130, 0.15);
     }
     .info-box {
-        padding: 1rem;
-        border-radius: 8px;
-        background-color: #f3f2f3;
-        border-left: 5px solid #1e5546;
+        padding: 1.25rem;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border: 1px solid #e9ecef;
         margin: 1rem 0;
         color: #193c32;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
     }
     
-    /* Tabs */
+    /* Tabs com visual moderno */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 2rem;
-        background-color: #f3f2f3;
-        padding: 0.5rem;
-        border-radius: 8px;
+        gap: 1rem;
+        background: white;
+        padding: 0.75rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .stTabs [data-baseweb="tab"] {
         color: #193c32;
         font-weight: 600;
         padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #f8f9fa;
     }
     .stTabs [aria-selected="true"] {
-        color: #14735a;
-        background-color: white;
-        border-radius: 6px;
+        color: white;
+        background: linear-gradient(135deg, #14735a 0%, #2daa82 100%);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(20, 115, 90, 0.3);
     }
     
-    /* Inputs */
+    /* Inputs com visual limpo */
     .stSelectbox label, .stMultiSelect label, .stCheckbox label, .stDateInput label {
         color: #193c32 !important;
         font-weight: 600 !important;
+        font-size: 0.95rem !important;
     }
     
-    /* Containers */
+    /* Select boxes */
+    .stSelectbox > div > div, .stMultiSelect > div > div {
+        border-radius: 10px !important;
+        border: 2px solid #e9ecef !important;
+        transition: all 0.3s ease !important;
+    }
+    .stSelectbox > div > div:focus-within, .stMultiSelect > div > div:focus-within {
+        border-color: #2daa82 !important;
+        box-shadow: 0 0 0 3px rgba(45, 170, 130, 0.1) !important;
+    }
+    
+    /* Date inputs */
+    .stDateInput > div > div > input {
+        border-radius: 10px !important;
+        border: 2px solid #e9ecef !important;
+    }
+    
+    /* Containers com sombra suave */
     .element-container {
-        background-color: white;
+        background-color: transparent;
     }
     
-    /* Cards de fundos */
+    /* Cards de fundos modernos */
     .fundo-card {
-        padding: 0.75rem;
-        background-color: #f3f2f3;
-        border-radius: 6px;
-        margin-bottom: 0.5rem;
-        border-left: 3px solid #2daa82;
+        padding: 1rem;
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+    }
+    .fundo-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(45, 170, 130, 0.15);
+        border-color: #2daa82;
     }
     .fundo-card strong {
-        color: #193c32;
+        color: #14735a;
     }
     
     /* Progress bar */
     .stProgress > div > div > div > div {
-        background-color: #2daa82;
+        background: linear-gradient(90deg, #14735a 0%, #2daa82 100%);
     }
     
     /* Metrics */
     [data-testid="stMetricValue"] {
         color: #14735a;
+        font-weight: 700;
     }
     
-    /* Sidebar */
+    /* Sidebar com gradiente */
     [data-testid="stSidebar"] {
-        background-color: #f3f2f3;
+        background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+        border-right: 1px solid #e9ecef;
     }
     [data-testid="stSidebar"] h3 {
         color: #193c32;
@@ -156,28 +206,111 @@ st.markdown("""
         font-weight: 600;
     }
     
-    /* Cards de banco na sidebar */
+    /* Cards de banco na sidebar - Visual moderno */
     .banco-card {
-        padding: 0.75rem 1rem;
-        margin: 0.5rem 0;
-        border-radius: 6px;
-        border: 1px solid #e0e0e0;
-        background-color: white;
+        padding: 1rem 1.25rem;
+        margin: 0.75rem 0;
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        background: white;
         text-align: center;
         font-size: 1rem;
-        transition: all 0.2s ease;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    .banco-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     .banco-card.selected {
-        background-color: #14735a;
+        background: linear-gradient(135deg, #14735a 0%, #2daa82 100%);
         color: white;
-        border-color: #14735a;
-        font-weight: 600;
+        border-color: transparent;
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(20, 115, 90, 0.3);
     }
     .banco-card.disabled {
-        background-color: #f8f8f8;
-        color: #aaa;
-        border-color: #e5e5e5;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        color: #adb5bd;
+        border-color: #dee2e6;
+        cursor: not-allowed;
+        box-shadow: none;
     }
+    .banco-card.disabled:hover {
+        transform: none;
+    }
+    
+    /* Info boxes melhoradas */
+    .stAlert {
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+    
+    /* Checkboxes */
+    .stCheckbox {
+        background: white;
+        padding: 0.75rem;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    .stCheckbox:hover {
+        border-color: #2daa82;
+        box-shadow: 0 2px 8px rgba(45, 170, 130, 0.1);
+    }
+    
+    /* Dividers */
+    hr {
+        border: none;
+        border-top: 2px solid #e9ecef;
+        margin: 2rem 0;
+    }
+    
+    /* Multi-select tags */
+    .stMultiSelect [data-baseweb="tag"] {
+        background: linear-gradient(135deg, #14735a 0%, #2daa82 100%);
+        border-radius: 8px;
+    }
+    
+    /* Expanders */
+    .streamlit-expanderHeader {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    .streamlit-expanderHeader:hover {
+        border-color: #2daa82;
+        box-shadow: 0 2px 8px rgba(45, 170, 130, 0.1);
+    }
+    
+    /* Code blocks */
+    pre {
+        background: #f8f9fa !important;
+        border-radius: 10px !important;
+        border: 1px solid #e9ecef !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #14735a 0%, #2daa82 100%);
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #193c32;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -222,14 +355,22 @@ try:
     HAS_CREDENCIAIS = True
 except ImportError as e:
     HAS_CREDENCIAIS = False
-    st.error(f"❌ Erro ao carregar credenciais: {str(e)}")
-    st.info("""
-    **Configuração necessária:**
-    - **Streamlit Cloud**: Configure os secrets em Settings > Secrets
-    - **Local**: Crie o arquivo `credenciais_bancos.py` com as credenciais
-    
-    Veja o arquivo `DEPLOY.md` para mais detalhes.
-    """)
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); padding: 1.5rem; border-radius: 12px; border-left: 4px solid #f44336; margin: 1rem 0;">
+        <strong style="color: #c62828; font-size: 1.2rem;">❌ Erro ao carregar credenciais</strong><br>
+        <span style="color: #b71c1c; font-size: 0.95rem;">{str(e)}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 1.5rem; border-radius: 12px; border-left: 4px solid #2196f3; margin: 1rem 0;">
+        <strong style="color: #1565c0; font-size: 1.1rem;">ℹ️ Configuração necessária</strong><br><br>
+        <ul style="color: #0d47a1; margin-left: 1rem;">
+            <li><strong>Streamlit Cloud:</strong> Configure os secrets em Settings > Secrets</li>
+            <li><strong>Local:</strong> Crie o arquivo <code>credenciais_bancos.py</code> com as credenciais</li>
+        </ul>
+        <span style="color: #424242; font-size: 0.9rem;">Veja o arquivo <code>DEPLOY.md</code> para mais detalhes.</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
 # Lista de fundos disponíveis
@@ -238,7 +379,14 @@ fundos_disponiveis = sorted(list(SANTANDER_FUNDOS.keys()))
 st.markdown("---")
 
 # ========== SEÇÃO 1: SELEÇÃO DE FUNDOS ==========
-st.markdown('<div class="section-title">📁 Seleção de Fundos</div>', unsafe_allow_html=True)
+st.markdown("""
+<div style="background: white; padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 2rem;">
+    <div style="font-size: 1.5rem; font-weight: 600; color: #193c32; margin-bottom: 1rem; display: flex; align-items: center;">
+        <span style="background: linear-gradient(135deg, #14735a 0%, #2daa82 100%); color: white; padding: 0.5rem 1rem; border-radius: 10px; margin-right: 1rem;">📁</span>
+        Seleção de Fundos
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 col1, col2 = st.columns([3, 1])
 
@@ -259,7 +407,14 @@ with col2:
     st.metric("Fundos Selecionados", len(fundos_selecionados), delta=f"de {len(fundos_disponiveis)}")
 
 # ========== SEÇÃO 2: PERÍODO ==========
-st.markdown('<div class="section-title">📅 Definição de Período</div>', unsafe_allow_html=True)
+st.markdown("""
+<div style="background: white; padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 2rem;">
+    <div style="font-size: 1.5rem; font-weight: 600; color: #193c32; margin-bottom: 1rem; display: flex; align-items: center;">
+        <span style="background: linear-gradient(135deg, #14735a 0%, #2daa82 100%); color: white; padding: 0.5rem 1rem; border-radius: 10px; margin-right: 1rem;">📅</span>
+        Definição de Período
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns([2, 1, 1])
 
@@ -316,24 +471,46 @@ with col3:
 
 # Validação de datas
 if data_inicial > data_final:
-    st.error("❌ Data inicial não pode ser maior que data final")
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); padding: 1.25rem; border-radius: 12px; border-left: 4px solid #f44336;">
+        <strong style="color: #c62828;">❌ Data inicial não pode ser maior que data final</strong>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ========== SEÇÃO 3: FORMATOS DE EXPORTAÇÃO ==========
-st.markdown('<div class="section-title">📄 Formatos de Exportação</div>', unsafe_allow_html=True)
+st.markdown("""
+<div style="background: white; padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 2rem;">
+    <div style="font-size: 1.5rem; font-weight: 600; color: #193c32; margin-bottom: 1rem; display: flex; align-items: center;">
+        <span style="background: linear-gradient(135deg, #14735a 0%, #2daa82 100%); color: white; padding: 0.5rem 1rem; border-radius: 10px; margin-right: 1rem;">📄</span>
+        Formatos de Exportação
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.info("📊 **Excel (.xlsx)** sempre será gerado")
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 1rem; border-radius: 12px; border-left: 4px solid #2196f3;">
+        <strong style="color: #1565c0;">📊 Excel (.xlsx)</strong><br>
+        <span style="color: #424242; font-size: 0.9rem;">Sempre será gerado</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     gerar_pdf = st.checkbox("📑 Gerar também PDF (.pdf)", value=True, help="Gera arquivo PDF no formato Internet Banking Empresarial")
 
 with col2:
     formatos_str = ["Excel"]
     if gerar_pdf:
         formatos_str.append("PDF")
-    st.success(f"✅ Formatos que serão gerados: **{' e '.join(formatos_str)}**")
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); padding: 1.25rem; border-radius: 12px; border-left: 4px solid #2daa82; margin-top: 1rem;">
+        <strong style="color: #14735a; font-size: 1.1rem;">✅ Formatos selecionados</strong><br>
+        <span style="color: #193c32; font-size: 1rem; font-weight: 600;">{' e '.join(formatos_str)}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-st.markdown("---")
+st.markdown("<br><br>", unsafe_allow_html=True)
 
 # ========== BOTÃO DE GERAÇÃO ==========
 buscar_disabled = (
@@ -345,7 +522,17 @@ buscar_disabled = (
 if 'processando' not in st.session_state:
     st.session_state.processando = False
 
-if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_state.processando, use_container_width=True):
+# Container destacado para o botão
+st.markdown("""
+<div style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); padding: 2rem; border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); text-align: center; border: 2px solid #e9ecef;">
+    <div style="font-size: 1.3rem; font-weight: 600; color: #193c32; margin-bottom: 1rem;">
+        🚀 Pronto para gerar os extratos?
+    </div>
+</div>
+""", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_state.processando, use_container_width=True, key="btn_gerar"):
     # Marcar como processando para evitar cliques duplos
     st.session_state.processando = True
     
@@ -443,16 +630,26 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
         # Mensagens de conclusão
         if len(arquivos_gerados) == 0:
             status_text.warning("⚠️ Nenhum arquivo gerado")
-            st.warning("⚠️ Nenhum arquivo foi gerado. Verifique se os fundos selecionados têm contas cadastradas no período.")
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); padding: 1.25rem; border-radius: 12px; border-left: 4px solid #ff9800;">
+                <strong style="color: #e65100;">⚠️ Nenhum arquivo foi gerado</strong><br>
+                <span style="color: #bf360c; font-size: 0.95rem;">Verifique se os fundos selecionados têm contas cadastradas no período.</span>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             status_text.success(f"✅ {len(arquivos_gerados)} arquivo(s) gerado(s) com sucesso!")
             
     except Exception as e:
         progress_bar.progress(1.0)
         status_text.error("❌ Erro durante processamento")
-        st.error(f"❌ Erro: {str(e)}")
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); padding: 1.5rem; border-radius: 12px; border-left: 4px solid #f44336;">
+            <strong style="color: #c62828; font-size: 1.2rem;">❌ Erro durante processamento</strong><br>
+            <span style="color: #b71c1c; font-size: 0.95rem;">{str(e)}</span>
+        </div>
+        """, unsafe_allow_html=True)
         import traceback
-        with st.expander("🔴 Detalhes do erro"):
+        with st.expander("🔴 Ver detalhes técnicos do erro"):
             st.code(traceback.format_exc())
     
     finally:
@@ -464,28 +661,54 @@ if st.button("▶️ Gerar Extratos", disabled=buscar_disabled or st.session_sta
     
     # Mostrar resultados apenas se há arquivos gerados
     if arquivos_gerados:
-        st.markdown("---")
-        st.markdown('<div class="section-title">📥 Arquivos Gerados</div>', unsafe_allow_html=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background: white; padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 2rem;">
+            <div style="font-size: 1.5rem; font-weight: 600; color: #193c32; margin-bottom: 1rem; display: flex; align-items: center;">
+                <span style="background: linear-gradient(135deg, #14735a 0%, #2daa82 100%); color: white; padding: 0.5rem 1rem; border-radius: 10px; margin-right: 1rem;">📥</span>
+                Arquivos Gerados
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Agrupar por tipo
         excels = [f for f in arquivos_gerados if f.endswith('.xlsx')]
         pdfs = [f for f in arquivos_gerados if f.endswith('.pdf')]
         
-        # Resumo simples
-        st.success(f"✅ {len(excels)} planilha(s) Excel e {len(pdfs)} arquivo(s) PDF gerado(s)")
-        
-        col1, col2 = st.columns(2)
+        # Resumo com cards visuais
+        col1, col2, col3 = st.columns(3)
         
         with col1:
-            if excels:
-                st.markdown(f"**📊 Excel:** {len(excels)} arquivo(s)")
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 1.5rem; border-radius: 12px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.08);">
+                <div style="font-size: 2.5rem;">✅</div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #2e7d32; margin: 0.5rem 0;">{len(arquivos_gerados)}</div>
+                <div style="color: #1b5e20; font-weight: 600;">Arquivos Gerados</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col2:
+            if excels:
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 1.5rem; border-radius: 12px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.08);">
+                    <div style="font-size: 2.5rem;">📊</div>
+                    <div style="font-size: 1.8rem; font-weight: 700; color: #1565c0; margin: 0.5rem 0;">{len(excels)}</div>
+                    <div style="color: #0d47a1; font-weight: 600;">Planilhas Excel</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col3:
             if pdfs:
-                st.markdown(f"**📑 PDF:** {len(pdfs)} arquivo(s)")
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); padding: 1.5rem; border-radius: 12px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.08);">
+                    <div style="font-size: 2.5rem;">📑</div>
+                    <div style="font-size: 1.8rem; font-weight: 700; color: #c2185b; margin: 0.5rem 0;">{len(pdfs)}</div>
+                    <div style="color: #880e4f; font-weight: 600;">Arquivos PDF</div>
+                </div>
+                """, unsafe_allow_html=True)
         
         # Botão para baixar ZIP com todos os arquivos
-        st.markdown("---")
+        st.markdown("<br><br>", unsafe_allow_html=True)
         
         # Criar arquivo ZIP em memória com estrutura de pastas
         from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
