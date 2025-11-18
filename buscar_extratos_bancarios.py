@@ -571,11 +571,21 @@ class SantanderExtratosBancarios:
         # Linha 3: Headers das colunas
         dados.append(['Data', None, 'Histórico', 'Documento', 'Valor (R$)', 'Saldo (R$)'])
         
-        # Ordenar transações: data crescente, mas dentro do mesmo dia ordem reversa (como banco)
-        # Usa índice negativo para reverter ordem dentro do mesmo dia
-        transacoes_com_indice = [(i, t) for i, t in enumerate(transacoes)]
-        transacoes_ordenadas = [t for i, t in sorted(transacoes_com_indice, key=lambda x: (x[1].get('transactionDate', ''), -x[0]))]
-        log(f"   📋 Transações ordenadas cronologicamente (mais antiga primeiro, ordem reversa no mesmo dia)")
+        # Ordenar transações: dias crescentes, dentro do mesmo dia ordem do extrato Santander
+        from itertools import groupby
+        
+        # Primeiro, ordenar todas as transações por data
+        transacoes_por_data = sorted(transacoes, key=lambda x: x.get('transactionDate', ''))
+        
+        # Agrupar por data e reverter ordem dentro de cada grupo
+        transacoes_ordenadas = []
+        for data, grupo in groupby(transacoes_por_data, key=lambda x: x.get('transactionDate', '')):
+            # Converter grupo em lista e reverter (para match com extrato Santander)
+            transacoes_do_dia = list(grupo)
+            transacoes_do_dia.reverse()  # Última transação do dia primeiro
+            transacoes_ordenadas.extend(transacoes_do_dia)
+        
+        log(f"   📋 Transações ordenadas: dias crescentes, ordem Santander dentro do dia")
         
         # Calcular saldo anterior (saldo atual - todas as transações do período)
         saldo_atual = 0
@@ -893,11 +903,21 @@ class SantanderExtratosBancarios:
                 saldo_atual = float(saldo_info.get('availableAmount', 0))
                 log(f"   💰 Saldo atual (API): R$ {saldo_atual:,.2f}")
             
-            # Ordenar transações: data crescente, mas dentro do mesmo dia ordem reversa (como banco)
-            # Usa índice negativo para reverter ordem dentro do mesmo dia
-            transacoes_com_indice = [(i, t) for i, t in enumerate(transacoes)]
-            transacoes_ordenadas = [t for i, t in sorted(transacoes_com_indice, key=lambda x: (x[1].get('transactionDate', ''), -x[0]))]
-            log(f"   📋 Transações ordenadas cronologicamente (mais antiga primeiro, ordem reversa no mesmo dia)")
+            # Ordenar transações: dias crescentes, dentro do mesmo dia ordem do extrato Santander
+            from itertools import groupby
+            
+            # Primeiro, ordenar todas as transações por data
+            transacoes_por_data = sorted(transacoes, key=lambda x: x.get('transactionDate', ''))
+            
+            # Agrupar por data e reverter ordem dentro de cada grupo
+            transacoes_ordenadas = []
+            for data, grupo in groupby(transacoes_por_data, key=lambda x: x.get('transactionDate', '')):
+                # Converter grupo em lista e reverter (para match com extrato Santander)
+                transacoes_do_dia = list(grupo)
+                transacoes_do_dia.reverse()  # Última transação do dia primeiro
+                transacoes_ordenadas.extend(transacoes_do_dia)
+            
+            log(f"   📋 Transações ordenadas: dias crescentes, ordem Santander dentro do dia")
             
             # Somar todas as transações do período para calcular o saldo anterior
             total_transacoes = 0
