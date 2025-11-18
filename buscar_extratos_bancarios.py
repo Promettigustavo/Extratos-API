@@ -574,8 +574,29 @@ class SantanderExtratosBancarios:
         # Ordenar transações da mais antiga para a mais recente
         transacoes_ordenadas = sorted(transacoes, key=lambda x: x.get('transactionDate', ''))
         
-        # Calcular saldo inicial e processar transações
-        saldo = 0
+        # Calcular saldo anterior (saldo atual - todas as transações do período)
+        saldo_atual = 0
+        if saldo_info and 'availableAmount' in saldo_info:
+            saldo_atual = float(saldo_info.get('availableAmount', 0))
+            log(f"   💰 Saldo atual (API): R$ {saldo_atual:,.2f}")
+        
+        # Somar todas as transações do período para calcular o saldo anterior
+        total_transacoes = 0
+        for trans in transacoes_ordenadas:
+            valor = float(trans.get('amount', 0))
+            tipo = trans.get('creditDebitType', '')
+            if tipo == 'DEBITO':
+                total_transacoes -= abs(valor)
+            else:
+                total_transacoes += abs(valor)
+        
+        # Saldo anterior = Saldo atual - Total das transações
+        saldo_anterior = saldo_atual - total_transacoes
+        log(f"   📊 Total transações período: R$ {total_transacoes:,.2f}")
+        log(f"   📍 Saldo anterior calculado: R$ {saldo_anterior:,.2f}")
+        
+        # Iniciar com o saldo anterior
+        saldo = saldo_anterior
         
         # Adicionar linha de saldo anterior
         if transacoes_ordenadas:
@@ -860,21 +881,40 @@ class SantanderExtratosBancarios:
             # Cabeçalho (com coluna vazia após Data)
             table_data.append(['Data', '', 'Histórico', 'Documento', 'Valor (R$)', 'Saldo (R$)'])
             
-            # Calcular saldo
-            saldo = 0
+            # Calcular saldo anterior (saldo atual - todas as transações do período)
+            saldo_atual = 0
             saldo_fmt = "0,00"  # Inicializar com valor padrão para evitar erro quando não há transações
             
-            # Se há informações de saldo da API, usar como saldo inicial
+            # Se há informações de saldo da API, usar como saldo atual
             if saldo_info and 'availableAmount' in saldo_info:
-                saldo = float(saldo_info.get('availableAmount', 0))
-                saldo_fmt = f"{abs(saldo):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                if saldo < 0:
-                    saldo_fmt = f"-{saldo_fmt}"
+                saldo_atual = float(saldo_info.get('availableAmount', 0))
+                log(f"   💰 Saldo atual (API): R$ {saldo_atual:,.2f}")
             
             # Ordenar transações da mais antiga para a mais recente
             # Usa data como critério primário e transactionId como secundário
             transacoes_ordenadas = sorted(transacoes, key=lambda x: (x.get('transactionDate', ''), x.get('transactionId', '')))
             log(f"   📋 Transações ordenadas cronologicamente (mais antiga primeiro)")
+            
+            # Somar todas as transações do período para calcular o saldo anterior
+            total_transacoes = 0
+            for trans in transacoes_ordenadas:
+                valor = float(trans.get('amount', 0))
+                tipo = trans.get('creditDebitType', '')
+                if tipo == 'DEBITO':
+                    total_transacoes -= abs(valor)
+                else:
+                    total_transacoes += abs(valor)
+            
+            # Saldo anterior = Saldo atual - Total das transações
+            saldo_anterior = saldo_atual - total_transacoes
+            log(f"   📊 Total transações período: R$ {total_transacoes:,.2f}")
+            log(f"   📍 Saldo anterior calculado: R$ {saldo_anterior:,.2f}")
+            
+            # Iniciar com o saldo anterior
+            saldo = saldo_anterior
+            saldo_fmt = f"{abs(saldo):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            if saldo < 0:
+                saldo_fmt = f"-{saldo_fmt}"
             
             # Saldo anterior
             if transacoes_ordenadas and len(transacoes_ordenadas) > 0:
